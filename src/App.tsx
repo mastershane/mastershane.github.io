@@ -30,8 +30,8 @@ function App() {
         <li>w: White Camel</li>
         <li>b: Blue Camel</li>
         <li>y: Yellow Camel</li>
-        {/* <li>d: Desert</li>
-        <li>o: Oasis</li> */}
+        <li>d: Desert</li>
+        <li>o: Oasis</li>
       </ul>
       <form onSubmit={(e) => {calculate(); e.preventDefault();}}>
         <label>

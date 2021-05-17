@@ -1,6 +1,8 @@
 
 export type Color = 'Red' | 'Blue' | 'Green' | 'White' | 'Yellow';
 export type Roll = 1 | 2 | 3;
+export type Hazard = 'Desert' | 'Oasis';
+
 // tslint:disable: interface-name
 export interface Camel {
 	color: Color;
@@ -8,6 +10,7 @@ export interface Camel {
 
 export interface Tile {
 	camels: Color[];
+    hazard?: Hazard;
 }
 
 export interface CamelState {
@@ -124,7 +127,7 @@ export const getOdds = (camelState: CamelState, dice: Die[]): CamelOdds[] => {
 // need to account for deserts and stuff like that on the camel state
 export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {first: Color, second: Color }  => {
 	const clone: CamelState = {
-		tiles: [...camelState.tiles.map((t) => ({camels: [...t.camels]}))],
+		tiles: [...camelState.tiles.map((t) => ({camels: [...t.camels], hazard: t.hazard}))],
 	};
 
 	const moveCamelUnit = (dieRoll: DieRoll) => {
@@ -143,10 +146,39 @@ export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {fi
 			}
 		}
 
-		// move each camel in the unit (preserving vertical order)
-		camelUnit.forEach((c) => {
-			clone.tiles[destinationIndex].camels.push(c);
-		});		
+        const destinationTile = clone.tiles[destinationIndex];
+        if(destinationTile.hazard === 'Desert'){
+            const specialDestination = clone.tiles[destinationIndex - 1];
+
+            const otherCamels = specialDestination.camels;
+            specialDestination.camels = [];
+            camelUnit.forEach((c) => {
+                specialDestination.camels.push(c);
+            });
+            otherCamels.forEach((c) => {
+                specialDestination.camels.push(c);
+            });
+
+        } else if(destinationTile.hazard === 'Oasis'){
+            const specialDestinationIndex = destinationIndex + 1;
+            const specialDestination = clone.tiles[specialDestinationIndex];
+            
+            if (specialDestinationIndex + 1 >= clone.tiles.length) {
+                for (let i = clone.tiles.length - 1; i < specialDestinationIndex; i++) {
+                    clone.tiles.push({camels: []});
+                }
+            }
+
+            camelUnit.forEach((c) => {
+                specialDestination.camels.push(c);
+            });	
+
+        } else {
+            // move each camel in the unit (preserving vertical order)
+            camelUnit.forEach((c) => {
+                destinationTile.camels.push(c);
+            });	
+        }	
 	};
 
 	timeLine.forEach((roll) => {
@@ -194,25 +226,3 @@ function permute<T>(permutation: T[]) {
 	}
 	return result;
   }
-
-const sampleCamelState: CamelState = {
-	tiles: [
-		{camels: ['Blue']},
-		{camels: ['Red', 'Green']},
-		{camels: ['Yellow', 'White']},
-	],
-};
-
-export const testOdds = () => {
-	const oddsResult = getOdds(sampleCamelState, [
-		{color: 'Green'}, 
-		{color: 'White'}, 
-		{color: 'Red'}, 
-		{color: 'Blue'}, 
-		{color: 'Yellow'},
-	]);
-	const output = JSON.stringify(oddsResult, null, '\t');
-	// tslint:disable-next-line: no-console
-	console.log(output);
-};
-

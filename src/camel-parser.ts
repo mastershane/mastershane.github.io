@@ -1,6 +1,6 @@
 // convert camel code into the camel state data model
 
-import { CamelState, Color, Die, Map, Tile } from "./camel";
+import { CamelState, Color, Die, Hazard, Map, Tile } from "./camel";
 
 const codeColorMap: Map<Color> = {
     "r": "Red",
@@ -8,7 +8,11 @@ const codeColorMap: Map<Color> = {
     "g": "Green",
     "y": "Yellow",
     "w": "White",
-}
+};
+const hazardCodeMap: Map<Hazard> = {
+    "o":"Oasis",
+    "d": "Desert"
+};
 
 export const parseCamel = (camelCode: string): CamelState => {
     const tiles = camelCode.split(",").map(squareString => {
@@ -21,6 +25,10 @@ export const parseCamel = (camelCode: string): CamelState => {
                 case "y":
                 case "w":
                     tile.camels.push(codeColorMap[character]);
+                    break;
+                case "o":
+                case "d":
+                    tile.hazard = hazardCodeMap[character];
                     break;
                 default:
                     throw new Error(`Unsupported Character ${character} found in camel string`)
