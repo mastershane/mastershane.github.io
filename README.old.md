@@ -1,2 +1,0 @@
-# mastershane.github.io
-camelator
