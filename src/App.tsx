@@ -36,9 +36,10 @@ function App() {
 
     let remainingDice = state.diceInput.replace(colorToCode(color), '');
     
-    // if there are no remaining dice. Move to next round and refresh the dice.
+    // if there are no remaining dice. Move to next round and clear the board;
     if(!remainingDice){
       remainingDice = 'rwgby';
+      camelState.tiles.forEach(t => t.hazard = undefined);
     }
 
     const dice = parseDice(remainingDice);
