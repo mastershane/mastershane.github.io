@@ -42,3 +42,37 @@ export const parseCamel = (camelCode: string): CamelState => {
 export const parseDice = (diceCode: string): Die[] => {
     return diceCode.split("").map(c => ({ color: codeColorMap[c] }));
 };
+
+export const toCamelCode = (camelState: CamelState): string => {
+    
+    return camelState.tiles.map(tile => {
+        if(tile.hazard){
+            switch(tile.hazard){
+                case 'Oasis':
+                    return 'o';
+                case 'Desert':
+                    return 'd';
+            }
+        }
+        return tile.camels.map(colorToCode).join('');
+    }).join(',');
+}
+
+export const toDiceCode = (dice: Die[]) => {
+    return dice.map(d => colorToCode(d.color)).join('');
+};
+
+export const colorToCode = (color: Color) => {
+    switch(color) {
+        case 'Red':
+            return 'r';
+        case 'Green':
+            return 'g';
+        case 'Blue': 
+            return 'b';
+        case 'White':
+            return 'w';
+        case 'Yellow':
+            return 'y';
+    }
+};
