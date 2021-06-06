@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './App.css';
-import { parseCamel, parseDice } from './camel-parser'
-import { CamelOdds, getOdds } from './camel'
+import { colorToCode, parseCamel, parseDice, toCamelCode } from './camel-parser'
+import { CamelOdds, Color, DieRoll, generateInitialState, getOdds, moveCamelUnit, Roll } from './camel'
 
 interface IState {
   boardInput: string;
@@ -10,14 +10,41 @@ interface IState {
 }
 function App() {
 
-  const [state, setState] = useState<IState>({ boardInput: "", diceInput: "rgbyw" });
+  // create a random initial state will all dice remaining
+  const [state, setState] = useState<IState>({ 
+    boardInput: toCamelCode(generateInitialState()), 
+    diceInput: "rgbyw" 
+  });
 
   const calculate = () => {
     const camelState = parseCamel(state.boardInput);
     const dice = parseDice(state.diceInput);
     const results = getOdds(camelState, dice);
     setState({...state, results})
-  }
+  };
+
+  const selectNextRoll = (e: any) => {
+    // option format is Color_Roll e.g. Red_1
+    const selectedOption = e.target.value.split('_');
+    const color = selectedOption[0] as Color;
+    const dieRoll: DieRoll = {
+      color: color,
+      Roll: parseInt(selectedOption[1]) as Roll,
+    }
+    const camelState = parseCamel(state.boardInput);
+    moveCamelUnit(camelState, dieRoll);
+
+    let remainingDice = state.diceInput.replace(colorToCode(color), '');
+    
+    // if there are no remaining dice. Move to next round and refresh the dice.
+    if(!remainingDice){
+      remainingDice = 'rwgby';
+    }
+
+    const dice = parseDice(remainingDice);
+    const results = getOdds(camelState, dice);
+    setState({boardInput: toCamelCode(camelState), diceInput: remainingDice, results})
+  };
 
   return (
     <div className="container">
@@ -44,28 +71,44 @@ function App() {
         </div>
         <br />
         <input className="btn btn-primary" type="submit" value="Calculate!"/>
+        {state.results && 
+          <select className="form-select" onChange={selectNextRoll} value='_' style={{marginTop: '10px'}}>
+            <option selected disabled value='_'>Select Next Roll</option>
+            {parseDice(state.diceInput).map(d =>
+              <optgroup label={d.color}>
+                <option value={d.color + '_1'}>{d.color + ' 1'}</option>
+                <option value={d.color + '_2'}>{d.color + ' 2'}</option>
+                <option value={d.color + '_3'}>{d.color + ' 3'}</option>
+              </optgroup>
+            )}
+          </select>
+        }
       </form>
       <br />
       {state.results &&
         <table className="table table-bordered">
-          <tr>
-            <th>Camel</th>
-            <th>Five Value</th>
-            <th>Three Value</th>
-            <th>Two Value</th>
-            <th>First Place Odds</th>
-            <th>Second Place Odds</th>
-          </tr>
-          {state.results.map(r => 
-              <tr key={r.camel}>
-              <th scope="row">{r.camel}</th>
-              <td>{+r.fiveValue.toFixed(3)}</td>
-              <td>{+r.threeValue.toFixed(3)}</td>
-              <td>{+r.twoValue.toFixed(3)}</td>
-              <td>{+r.firstPlaceOdds.toFixed(3)}</td>
-              <td>{+r.secondPlaceOdds.toFixed(3)}</td>
+          <thead>
+            <tr>
+              <th>Camel</th>
+              <th>Five Value</th>
+              <th>Three Value</th>
+              <th>Two Value</th>
+              <th>First Place Odds</th>
+              <th>Second Place Odds</th>
             </tr>
-          )}
+          </thead>
+          <tbody>
+            {state.results.map(r => 
+                <tr key={r.camel}>
+                <th scope="row">{r.camel}</th>
+                <td>{+r.fiveValue.toFixed(3)}</td>
+                <td>{+r.threeValue.toFixed(3)}</td>
+                <td>{+r.twoValue.toFixed(3)}</td>
+                <td>{+r.firstPlaceOdds.toFixed(3)}</td>
+                <td>{+r.secondPlaceOdds.toFixed(3)}</td>
+              </tr>
+            )}
+          </tbody>
         </table>
       }
     </div>

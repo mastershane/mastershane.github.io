@@ -125,70 +125,20 @@ export const getOdds = (camelState: CamelState, dice: Die[]): CamelOdds[] => {
 };
 
 export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {first: Color, second: Color }  => {
-	const clone: CamelState = {
+	const cloneState: CamelState = {
 		tiles: [...camelState.tiles.map((t) => ({camels: [...t.camels], hazard: t.hazard}))],
 	};
 
-	const moveCamelUnit = (dieRoll: DieRoll) => {
-		const tileIndex = clone.tiles.findIndex((t) => t.camels.indexOf(dieRoll.color) > -1);
-		const tile = clone.tiles[tileIndex];
-
-		// getting and removing the camel unit
-		const camelUnit = tile.camels.splice(tile.camels.indexOf(dieRoll.color));
-
-		const destinationIndex = tileIndex + dieRoll.Roll;
-
-		// making sure that tiles in front exist in the array
-		if (destinationIndex >= clone.tiles.length) {
-			for (let i = clone.tiles.length - 1; i < destinationIndex; i++) {
-				clone.tiles.push({camels: []});
-			}
-		}
-
-        const destinationTile = clone.tiles[destinationIndex];
-        if(destinationTile.hazard === 'Desert'){
-            const specialDestination = clone.tiles[destinationIndex - 1];
-
-            const otherCamels = specialDestination.camels;
-            specialDestination.camels = [];
-            camelUnit.forEach((c) => {
-                specialDestination.camels.push(c);
-            });
-            otherCamels.forEach((c) => {
-                specialDestination.camels.push(c);
-            });
-
-        } else if(destinationTile.hazard === 'Oasis'){
-            const specialDestinationIndex = destinationIndex + 1;
-            
-            if (specialDestinationIndex + 1 >= clone.tiles.length) {
-                for (let i = clone.tiles.length - 1; i < specialDestinationIndex; i++) {
-                    clone.tiles.push({camels: []});
-                }
-            }
-
-			const specialDestination = clone.tiles[specialDestinationIndex];
-
-            camelUnit.forEach((c) => {
-                specialDestination.camels.push(c);
-            });	
-
-        } else {
-            // move each camel in the unit (preserving vertical order)
-            camelUnit.forEach((c) => {
-                destinationTile.camels.push(c);
-            });	
-        }	
-	};
-
+	// update the state after each die roll in the timeline
 	timeLine.forEach((roll) => {
-		moveCamelUnit(roll);
+		moveCamelUnit(cloneState, roll);
 	});
 
 	const winners: Color[] = [];
 
-	for (let t = clone.tiles.length - 1; t >= 0; t--) {
-		const tile = clone.tiles[t];
+	// get the end of round first and second place camel
+	for (let t = cloneState.tiles.length - 1; t >= 0; t--) {
+		const tile = cloneState.tiles[t];
 		for (let c = tile.camels.length - 1; c >= 0; c--) {
 			winners.push(tile.camels[c]);
 			if (winners.length === 2) {
@@ -202,7 +152,79 @@ export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {fi
 	throw Error('this code should not be reached');
 };
 
-function permute<T>(permutation: T[]) {
+// update the camel state based on the DieRoll
+export const moveCamelUnit = (camelState: CamelState, dieRoll: DieRoll): void => {
+	const tileIndex = camelState.tiles.findIndex((t) => t.camels.indexOf(dieRoll.color) > -1);
+	const tile = camelState.tiles[tileIndex];
+
+	// getting and removing the camel unit
+	const camelUnit = tile.camels.splice(tile.camels.indexOf(dieRoll.color));
+
+	const ensureTileExists = (index: number) => {
+		if (index >= camelState.tiles.length) {
+			for (let i = camelState.tiles.length - 1; i < index; i++) {
+				camelState.tiles.push({camels: []});
+			}
+		}
+	}
+
+	const placeCamelsAtTile = (camels: Color[], tile: Tile) => {
+		camels.forEach((c) => {
+			tile.camels.push(c);
+		});
+	}
+
+	const destinationIndex = tileIndex + dieRoll.Roll;
+
+	// make sure that tiles in front exist in the array
+	ensureTileExists(destinationIndex)
+
+	const destinationTile = camelState.tiles[destinationIndex];
+	if(destinationTile.hazard === 'Desert'){
+		const specialDestination = camelState.tiles[destinationIndex - 1];
+
+		// make sure that the moving camel unit is placed under the other camels
+		const otherCamels = specialDestination.camels;
+		specialDestination.camels = [];
+		
+		placeCamelsAtTile(camelUnit, specialDestination);
+		placeCamelsAtTile(otherCamels, specialDestination);
+
+	} else if(destinationTile.hazard === 'Oasis'){
+		const specialDestinationIndex = destinationIndex + 1;
+		ensureTileExists(specialDestinationIndex);
+		
+		const specialDestination = camelState.tiles[specialDestinationIndex];
+		placeCamelsAtTile(camelUnit, specialDestination);
+
+	} else {
+		placeCamelsAtTile(camelUnit, destinationTile);
+	}
+};
+
+export const generateInitialState = (): CamelState => {
+	const dice: Die[] = [{color:'Red'}, {color:'Green'},{color:'White'},{color:'Blue'},{color:'Yellow'}];
+
+	const camelState: CamelState = {tiles:[{camels: []}, {camels: []}, {camels: []}]};
+	while(dice.length) {
+		const dieRoll = getRandomRoll(dice);
+		camelState.tiles[dieRoll.Roll - 1].camels.push(dieRoll.color);
+	}
+	return camelState;
+};
+
+// note: this will actually modify the dice array in the parameter
+export const getRandomRoll = (dice: Die[]): DieRoll => {
+
+	const dieIndex = Math.floor(Math.random() * (dice.length));
+	const die = dice.splice(dieIndex, 1)[0];
+	const rollNumber = Math.floor(Math.random() * 3) + 1
+
+	return {...die, Roll: rollNumber as Roll};
+};
+
+// creates returns every possible permutation of an array
+function permute<T>(permutation: T[]): T[][] {
 	const length = permutation.length;
 	const result = [permutation.slice()];
 	const c = new Array(length).fill(0);
