@@ -15,7 +15,7 @@ const hazardCodeMap: Map<Hazard> = {
 };
 
 export const parseCamel = (camelCode: string): CamelState => {
-    const tiles = camelCode.split(",").map(squareString => {
+    const tiles = camelCode.toLowerCase().split(",").map(squareString => {
         const tile:Tile = {camels: []};
         squareString.split('').forEach(character => {
             switch(character) {

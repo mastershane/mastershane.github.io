@@ -124,7 +124,6 @@ export const getOdds = (camelState: CamelState, dice: Die[]): CamelOdds[] => {
 	});
 };
 
-// need to account for deserts and stuff like that on the camel state
 export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {first: Color, second: Color }  => {
 	const clone: CamelState = {
 		tiles: [...camelState.tiles.map((t) => ({camels: [...t.camels], hazard: t.hazard}))],
@@ -161,13 +160,14 @@ export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {fi
 
         } else if(destinationTile.hazard === 'Oasis'){
             const specialDestinationIndex = destinationIndex + 1;
-            const specialDestination = clone.tiles[specialDestinationIndex];
             
             if (specialDestinationIndex + 1 >= clone.tiles.length) {
                 for (let i = clone.tiles.length - 1; i < specialDestinationIndex; i++) {
                     clone.tiles.push({camels: []});
                 }
             }
+
+			const specialDestination = clone.tiles[specialDestinationIndex];
 
             camelUnit.forEach((c) => {
                 specialDestination.camels.push(c);

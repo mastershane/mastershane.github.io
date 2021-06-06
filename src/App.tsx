@@ -59,11 +59,11 @@ function App() {
           {state.results.map(r => 
               <tr key={r.camel}>
               <th scope="row">{r.camel}</th>
-              <td>{r.fiveValue.toFixed(3)}</td>
-              <td>{r.threeValue.toFixed(3)}</td>
-              <td>{r.twoValue.toFixed(3)}</td>
-              <td>{r.firstPlaceOdds.toFixed(3)}</td>
-              <td>{r.secondPlaceOdds.toFixed(3)}</td>
+              <td>{+r.fiveValue.toFixed(3)}</td>
+              <td>{+r.threeValue.toFixed(3)}</td>
+              <td>{+r.twoValue.toFixed(3)}</td>
+              <td>{+r.firstPlaceOdds.toFixed(3)}</td>
+              <td>{+r.secondPlaceOdds.toFixed(3)}</td>
             </tr>
           )}
         </table>
