@@ -38,8 +38,19 @@ export interface Map<T> {
 	[K: string]: T;
 }
 
+export interface OddsResult {
+	camelOdds: CamelOdds[];
+	desertHit: number[];
+	oasisHits: number[];
+}
+
+interface TileHits {
+	tile: Tile,
+	hits: number,
+}
+
 // lets just calculate every outcome and get the odds of each
-export const getOdds = (camelState: CamelState, dice: Die[]): CamelOdds[] => {
+export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
 
 	const camelWins: Map<{first: number, second: number}> = {
 		'Red': {first: 0, second: 0},
@@ -48,6 +59,8 @@ export const getOdds = (camelState: CamelState, dice: Die[]): CamelOdds[] => {
 		'White': {first: 0, second: 0},
 		'Yellow': {first: 0, second: 0},
 	};
+
+	const tileHits = camelState.tiles.map((t, i) => ({tile: t, hits: 0}));
 
 	// having all possible timelines in memory at once may be a burdon - look into streaming.
 	const permutations = permute(dice);
@@ -65,7 +78,7 @@ export const getOdds = (camelState: CamelState, dice: Die[]): CamelOdds[] => {
 
 			const die = permutation[index];
 			const rollValues: Roll[] = [
-				1 , 2, 3,
+				1, 2, 3,
 			];
 			
 			const rolls: RollNode[] = rollValues.map((n: Roll) => ({				
@@ -101,6 +114,9 @@ export const getOdds = (camelState: CamelState, dice: Die[]): CamelOdds[] => {
 
 		camelWins[winners.first].first = camelWins[winners.first].first + 1;
 		camelWins[winners.second].second = camelWins[winners.second].second + 1;
+		winners.tileHits.forEach((t, i) => {
+			tileHits[i].hits = tileHits[i].hits + t.hits;
+		})
 	});
 
 	const getBetValue = (firstOdds: number, secondOdds: number, betValue: number) => {
@@ -108,30 +124,57 @@ export const getOdds = (camelState: CamelState, dice: Die[]): CamelOdds[] => {
 		return (firstOdds * betValue) + (secondOdds * 1) + (loseOdds * -1);
 	};
 
-	return Object.keys(camelWins).map((k) => {
-		const wins = camelWins[k];
-		const firstOdds = wins.first / timelines.length;
-		const secondOdds = wins.second / timelines.length;
-		const camelOdds: CamelOdds = {
-			camel: k as Color,
-			firstPlaceOdds: firstOdds,
-			secondPlaceOdds: secondOdds,
-			fiveValue: getBetValue(firstOdds, secondOdds, 5),
-			threeValue: getBetValue(firstOdds, secondOdds, 3),
-			twoValue: getBetValue(firstOdds, secondOdds, 2),
-		} ;
-		return camelOdds;
+	const oddsResult: OddsResult =  {
+		camelOdds: 	Object.keys(camelWins).map((k) => {
+			const wins = camelWins[k];
+			const firstOdds = wins.first / timelines.length;
+			const secondOdds = wins.second / timelines.length;
+			const camelOdds: CamelOdds = {
+				camel: k as Color,
+				firstPlaceOdds: firstOdds,
+				secondPlaceOdds: secondOdds,
+				fiveValue: getBetValue(firstOdds, secondOdds, 5),
+				threeValue: getBetValue(firstOdds, secondOdds, 3),
+				twoValue: getBetValue(firstOdds, secondOdds, 2),
+			};
+	
+			return camelOdds;
+		}),
+		desertHit: [],
+		oasisHits: [],		
+	};
+	tileHits.forEach(t => {
+		if(t.tile.hazard){
+			switch(t.tile.hazard){
+				case 'Desert':
+					oddsResult.desertHit.push(t.hits / timelines.length);
+					break;
+				case 'Oasis':
+					oddsResult.oasisHits.push(t.hits / timelines.length);
+					break;
+			}
+		}
 	});
+
+	return oddsResult;
+
 };
 
-export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {first: Color, second: Color }  => {
+export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {
+	first: Color, second: Color, tileHits: TileHits[] 
+}  => {
 	const cloneState: CamelState = {
 		tiles: [...camelState.tiles.map((t) => ({camels: [...t.camels], hazard: t.hazard}))],
 	};
 
+	const tileHits = camelState.tiles.map((t, i) => ({tile: t, hits: 0}));
 	// update the state after each die roll in the timeline
 	timeLine.forEach((roll) => {
-		moveCamelUnit(cloneState, roll);
+
+		const hitIndex = moveCamelUnit(cloneState, roll);
+		if(hitIndex < tileHits.length){
+			tileHits[hitIndex].hits++;
+		}
 	});
 
 	const winners: Color[] = [];
@@ -145,6 +188,7 @@ export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {fi
 				return {
 					first: winners[0], 
 					second: winners[1],
+					tileHits,
 				};
 			}
 		}
@@ -153,7 +197,8 @@ export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {fi
 };
 
 // update the camel state based on the DieRoll
-export const moveCamelUnit = (camelState: CamelState, dieRoll: DieRoll): void => {
+// returns the destination index ignoring the special hazard movement
+export const moveCamelUnit = (camelState: CamelState, dieRoll: DieRoll): number => {
 	const tileIndex = camelState.tiles.findIndex((t) => t.camels.indexOf(dieRoll.color) > -1);
 	const tile = camelState.tiles[tileIndex];
 
@@ -200,6 +245,7 @@ export const moveCamelUnit = (camelState: CamelState, dieRoll: DieRoll): void =>
 	} else {
 		placeCamelsAtTile(camelUnit, destinationTile);
 	}
+	return destinationIndex;
 };
 
 export const generateInitialState = (): CamelState => {

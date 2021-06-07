@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import './App.css';
 import { colorToCode, parseCamel, parseDice, toCamelCode } from './camel-parser'
-import { CamelOdds, Color, DieRoll, generateInitialState, getOdds, moveCamelUnit, Roll } from './camel'
+import { Color, DieRoll, generateInitialState, getOdds, moveCamelUnit, OddsResult, Roll } from './camel'
 
 interface IState {
   boardInput: string;
   diceInput: string;
-  results?: CamelOdds[];
+  results?: OddsResult;
+  error?: string;
 }
 function App() {
 
@@ -17,34 +18,45 @@ function App() {
   });
 
   const calculate = () => {
-    const camelState = parseCamel(state.boardInput);
-    const dice = parseDice(state.diceInput);
-    const results = getOdds(camelState, dice);
-    setState({...state, results})
+    try {
+      const camelState = parseCamel(state.boardInput);
+      const dice = parseDice(state.diceInput);
+      const results = getOdds(camelState, dice);
+      setState({...state, results, error: undefined})
+    } catch (e) {
+      setState({...state, error: 'Error made during calculation'});
+      console.log(e);
+    }
   };
 
   const selectNextRoll = (e: any) => {
-    // option format is Color_Roll e.g. Red_1
-    const selectedOption = e.target.value.split('_');
-    const color = selectedOption[0] as Color;
-    const dieRoll: DieRoll = {
-      color: color,
-      Roll: parseInt(selectedOption[1]) as Roll,
-    }
-    const camelState = parseCamel(state.boardInput);
-    moveCamelUnit(camelState, dieRoll);
+    try {
+      // option format is Color_Roll e.g. Red_1
+      const selectedOption = e.target.value.split('_');
+      const color = selectedOption[0] as Color;
+      const dieRoll: DieRoll = {
+        color: color,
+        Roll: parseInt(selectedOption[1]) as Roll,
+      }
+      const camelState = parseCamel(state.boardInput);
+      moveCamelUnit(camelState, dieRoll);
 
-    let remainingDice = state.diceInput.replace(colorToCode(color), '');
-    
-    // if there are no remaining dice. Move to next round and clear the board;
-    if(!remainingDice){
-      remainingDice = 'rwgby';
-      camelState.tiles.forEach(t => t.hazard = undefined);
-    }
+      let remainingDice = state.diceInput.replace(colorToCode(color), '');
+      
+      // if there are no remaining dice. Move to next round and clear the board;
+      if(!remainingDice){
+        remainingDice = 'rwgby';
+        camelState.tiles.forEach(t => t.hazard = undefined);
+      }
 
-    const dice = parseDice(remainingDice);
-    const results = getOdds(camelState, dice);
-    setState({boardInput: toCamelCode(camelState), diceInput: remainingDice, results})
+      const dice = parseDice(remainingDice);
+      const results = getOdds(camelState, dice);
+      setState({boardInput: toCamelCode(camelState), diceInput: remainingDice, results});
+
+    } catch(e) {
+      setState({...state, error: 'Error made during calculation'});
+      console.log(e);
+    }
   };
 
   return (
@@ -86,7 +98,12 @@ function App() {
         }
       </form>
       <br />
-      {state.results &&
+      {state.error && 
+        <div className="alert alert-danger" role="alert">
+          {state.error}
+        </div>
+      }
+      {state.results && <>
         <table className="table table-bordered">
           <thead>
             <tr>
@@ -99,7 +116,7 @@ function App() {
             </tr>
           </thead>
           <tbody>
-            {state.results.map(r => 
+            {state.results.camelOdds.map(r => 
                 <tr key={r.camel}>
                 <th scope="row">{r.camel}</th>
                 <td>{+r.fiveValue.toFixed(3)}</td>
@@ -111,7 +128,13 @@ function App() {
             )}
           </tbody>
         </table>
-      }
+        {state.results.desertHit.map((d, i) => 
+          <div>Desert {i + 1} value: {+d.toFixed(3)}</div>
+        )}
+        {state.results.oasisHits.map((o, i) => 
+          <div>Oasis {i + 1} value: {+o.toFixed(3)}</div>
+        )}
+      </>}
     </div>
   );
 }
