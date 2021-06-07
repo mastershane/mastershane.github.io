@@ -60,8 +60,9 @@ function App() {
   };
 
   return (
-    <div className="container">
-      <h1>Cameluculator</h1>
+    <div className="container">   
+      <h1>🐪 The Camelculator 🐪</h1>
+      <h3>Camel (C)up Calculator</h3>
       <p>Enter a game state using camel code. Separate spaces with a ",". Camels stack so that the right most camel will be on top. Example: rw,,o,gby</p>
       <h3>Key:</h3>
       <ul>
