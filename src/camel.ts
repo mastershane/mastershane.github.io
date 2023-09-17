@@ -1,15 +1,18 @@
 
-export type Color = 'Red' | 'Blue' | 'Green' | 'White' | 'Yellow';
+export type Color = 'Red' | 'Blue' | 'Green' | 'Yellow' | 'Purple';
+export type ChaosColor = 'White' | 'Black';
 export type Roll = 1 | 2 | 3;
 export type Hazard = 'Desert' | 'Oasis';
 
+const GoodColors: Array<Color> = ['Red', 'Blue', 'Green', 'Yellow', 'Purple']
+
 // tslint:disable: interface-name
 export interface Camel {
-	color: Color;
+	color: Color | ChaosColor;
 }
 
 export interface Tile {
-	camels: Color[];
+	camels: Array<Color | ChaosColor>;
     hazard?: Hazard;
 }
 
@@ -27,7 +30,8 @@ export interface CamelOdds {
 }
 
 export interface Die {
-	color: Color;
+	//todo: need to support gray chaos die
+	color: (Color | ChaosColor);
 }
 
 export interface DieRoll extends Die {
@@ -52,11 +56,11 @@ interface TileHits {
 // lets just calculate every outcome and get the odds of each
 export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
 
-	const camelWins: Map<{first: number, second: number}> = {
+	const camelWins: Record<Color, {first: number, second: number}> = {
 		'Red': {first: 0, second: 0},
 		'Blue': {first: 0, second: 0},
 		'Green': {first: 0, second: 0},
-		'White': {first: 0, second: 0},
+		'Purple': {first: 0, second: 0},
 		'Yellow': {first: 0, second: 0},
 	};
 
@@ -125,7 +129,7 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
 	};
 
 	const oddsResult: OddsResult =  {
-		camelOdds: 	Object.keys(camelWins).map((k) => {
+		camelOdds: 	(Object.keys(camelWins) as Array<Color>).map((k) => {
 			const wins = camelWins[k];
 			const firstOdds = wins.first / timelines.length;
 			const secondOdds = wins.second / timelines.length;
@@ -182,8 +186,11 @@ export const simulateWinner = (camelState: CamelState, timeLine: DieRoll[]): {
 	// get the end of round first and second place camel
 	for (let t = cloneState.tiles.length - 1; t >= 0; t--) {
 		const tile = cloneState.tiles[t];
-		for (let c = tile.camels.length - 1; c >= 0; c--) {
-			winners.push(tile.camels[c]);
+
+		//Typescript, please don't make me do this
+		const goodCamels: Color[] = tile.camels.filter(c => GoodColors.includes(c as Color)) as Color[];
+		for (let c = goodCamels.length - 1; c >= 0; c--) {
+			winners.push(goodCamels[c]);
 			if (winners.length === 2) {
 				return {
 					first: winners[0], 
@@ -213,7 +220,7 @@ export const moveCamelUnit = (camelState: CamelState, dieRoll: DieRoll): number 
 		}
 	}
 
-	const placeCamelsAtTile = (camels: Color[], tile: Tile) => {
+	const placeCamelsAtTile = (camels: (Color | ChaosColor)[], tile: Tile) => {
 		camels.forEach((c) => {
 			tile.camels.push(c);
 		});
@@ -249,7 +256,7 @@ export const moveCamelUnit = (camelState: CamelState, dieRoll: DieRoll): number 
 };
 
 export const generateInitialState = (): CamelState => {
-	const dice: Die[] = [{color:'Red'}, {color:'Green'},{color:'White'},{color:'Blue'},{color:'Yellow'}];
+	const dice: Die[] = [{color:'Red'}, {color:'Green'},{color:'Purple'},{color:'Blue'},{color:'Yellow'}];
 
 	const camelState: CamelState = {tiles:[{camels: []}, {camels: []}, {camels: []}]};
 	while(dice.length) {
@@ -269,7 +276,7 @@ export const getRandomRoll = (dice: Die[]): DieRoll => {
 	return {...die, Roll: rollNumber as Roll};
 };
 
-// creates returns every possible permutation of an array
+// returns every possible permutation of an array
 function permute<T>(permutation: T[]): T[][] {
 	const length = permutation.length;
 	const result = [permutation.slice()];

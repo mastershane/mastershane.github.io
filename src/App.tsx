@@ -14,7 +14,7 @@ function App() {
   // create a random initial state will all dice remaining
   const [state, setState] = useState<IState>({ 
     boardInput: toCamelCode(generateInitialState()), 
-    diceInput: "rgbyw" 
+    diceInput: "rguyp" 
   });
 
   const calculate = () => {
@@ -45,7 +45,7 @@ function App() {
       
       // if there are no remaining dice. Move to next round and clear the board;
       if(!remainingDice){
-        remainingDice = 'rwgby';
+        remainingDice = 'rpguy';
         camelState.tiles.forEach(t => t.hazard = undefined);
       }
 
@@ -68,9 +68,10 @@ function App() {
       <ul>
         <li>r: Red Camel</li>
         <li>g: Green Camel</li>
-        <li>w: White Camel</li>
-        <li>b: Blue Camel</li>
+        <li>u: Blue Camel</li>
+        <li>p: Purple Camel</li>
         <li>y: Yellow Camel</li>
+        <li>w: White Camel</li>
         <li>d: Desert</li>
         <li>o: Oasis</li>
       </ul>

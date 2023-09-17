@@ -12,9 +12,19 @@ Currently the only way to use the Camelculator is to enter in the current board 
 <li>r: Red Camel or Die</li>
 <li>g: Green Camel or Die</li>
 <li>w: White Camel or Die</li>
-<li>b: Blue Camel or Die</li>
+<li>u: Blue Camel or Die</li>
 <li>y: Yellow Camel or Die</li>
 <li>d: Desert Tile</li>
 <li>o: Oasis Tile</li>
 <li>,,: Blank Space</li>
+
+Todo: 
+X (e.g. 2, 3, 4) for multiple blank spaces
+UI to show camel board
+Support finish line in calculations
+support chaos camels
+    use correct colors in regular camels
+    support white and black camels
+    support gray die
+    move choas camels backwards
 
