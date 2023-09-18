@@ -75,6 +75,7 @@ function App() {
         <li>d: Desert</li>
         <li>o: Oasis</li>
       </ul>
+      <p>Mulitple spaces can be inputted as a number (e.g. ,5,)</p>
       <form onSubmit={(e) => {calculate(); e.preventDefault();}}>
         <div className="form-group">
           <label className="form-label" htmlFor="camel-code">Camel Code </label>
