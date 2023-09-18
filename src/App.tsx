@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './App.css';
 import { colorToCode, parseCamel, parseDice, toCamelCode } from './camel-parser'
 import { Color, DieRoll, generateInitialState, getOdds, moveCamelUnit, OddsResult, Roll } from './camel'
+import { Results } from './results';
 
 interface IState {
   boardInput: string;
@@ -71,7 +72,6 @@ function App() {
         <li>u: Blue Camel</li>
         <li>p: Purple Camel</li>
         <li>y: Yellow Camel</li>
-        <li>w: White Camel</li>
         <li>d: Desert</li>
         <li>o: Oasis</li>
       </ul>
@@ -106,38 +106,7 @@ function App() {
           {state.error}
         </div>
       }
-      {state.results && <>
-        <table className="table table-bordered">
-          <thead>
-            <tr>
-              <th>Camel</th>
-              <th>Five Value</th>
-              <th>Three Value</th>
-              <th>Two Value</th>
-              <th>First Place Odds</th>
-              <th>Second Place Odds</th>
-            </tr>
-          </thead>
-          <tbody>
-            {state.results.camelOdds.map(r => 
-                <tr key={r.camel}>
-                <th scope="row">{r.camel}</th>
-                <td>{+r.fiveValue.toFixed(3)}</td>
-                <td>{+r.threeValue.toFixed(3)}</td>
-                <td>{+r.twoValue.toFixed(3)}</td>
-                <td>{+r.firstPlaceOdds.toFixed(3)}</td>
-                <td>{+r.secondPlaceOdds.toFixed(3)}</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-        {state.results.desertHit.map((d, i) => 
-          <div>Desert {i + 1} value: {+d.toFixed(3)}</div>
-        )}
-        {state.results.oasisHits.map((o, i) => 
-          <div>Oasis {i + 1} value: {+o.toFixed(3)}</div>
-        )}
-      </>}
+      {state.results && <Results results={state.results}/>}
     </div>
   );
 }
