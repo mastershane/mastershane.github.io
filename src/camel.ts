@@ -30,11 +30,15 @@ export interface CamelOdds {
 }
 
 export interface Die {
-	//todo: need to support gray chaos die
-	color: (Color | ChaosColor);
+	color: (Color | "Gray");
 }
 
-export interface DieRoll extends Die {
+export interface GoodDie {
+	color: Color;
+}
+
+export interface DieRoll {
+	color: Color | ChaosColor;
 	Roll: Roll;
 }
 
@@ -54,7 +58,10 @@ interface TileHits {
 }
 
 // lets just calculate every outcome and get the odds of each
-export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
+export const getOdds = (camelState: CamelState, allDice: Die[]): OddsResult => {
+
+	//hack to remove gray rolls since we don't know how to calculate
+	const dice: GoodDie[] = allDice.filter((d) => d.color !== 'Gray') as GoodDie[];
 
 	const camelWins: Record<Color, {first: number, second: number}> = {
 		'Red': {first: 0, second: 0},
@@ -81,6 +88,7 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
 			}
 
 			const die = permutation[index];
+
 			const rollValues: Roll[] = [
 				1, 2, 3,
 			];
@@ -212,28 +220,20 @@ export const moveCamelUnit = (camelState: CamelState, dieRoll: DieRoll): number 
 	// getting and removing the camel unit
 	const camelUnit = tile.camels.splice(tile.camels.indexOf(dieRoll.color));
 
-	const ensureTileExists = (index: number) => {
-		if (index >= camelState.tiles.length) {
-			for (let i = camelState.tiles.length - 1; i < index; i++) {
-				camelState.tiles.push({camels: []});
-			}
-		}
-	}
-
 	const placeCamelsAtTile = (camels: (Color | ChaosColor)[], tile: Tile) => {
 		camels.forEach((c) => {
 			tile.camels.push(c);
 		});
 	}
-
-	const destinationIndex = tileIndex + dieRoll.Roll;
-
-	// make sure that tiles in front exist in the array
-	ensureTileExists(destinationIndex)
+	const isChaos = dieRoll.color === 'White' || dieRoll.color === 'Black';
+	const moveIndex = (start: number, spacesAway: number) => {
+		return isChaos ? start - spacesAway : start + spacesAway;
+	}
+	const destinationIndex = moveIndex(tileIndex, dieRoll.Roll);
 
 	const destinationTile = camelState.tiles[destinationIndex];
 	if(destinationTile.hazard === 'Desert'){
-		const specialDestination = camelState.tiles[destinationIndex - 1];
+		const specialDestination = camelState.tiles[moveIndex(destinationIndex, -1)];
 
 		// make sure that the moving camel unit is placed under the other camels
 		const otherCamels = specialDestination.camels;
@@ -243,8 +243,7 @@ export const moveCamelUnit = (camelState: CamelState, dieRoll: DieRoll): number 
 		placeCamelsAtTile(otherCamels, specialDestination);
 
 	} else if(destinationTile.hazard === 'Oasis'){
-		const specialDestinationIndex = destinationIndex + 1;
-		ensureTileExists(specialDestinationIndex);
+		const specialDestinationIndex = moveIndex(destinationIndex, -1);
 		
 		const specialDestination = camelState.tiles[specialDestinationIndex];
 		placeCamelsAtTile(camelUnit, specialDestination);
@@ -258,7 +257,12 @@ export const moveCamelUnit = (camelState: CamelState, dieRoll: DieRoll): number 
 export const generateInitialState = (): CamelState => {
 	const dice: Die[] = [{color:'Red'}, {color:'Green'},{color:'Purple'},{color:'Blue'},{color:'Yellow'}];
 
-	const camelState: CamelState = {tiles:[{camels: []}, {camels: []}, {camels: []}]};
+	const camelState: CamelState = {tiles:[]};
+	for(let i = 0; i < 19; i++){
+		camelState.tiles.push({camels: []});
+	}
+	camelState.tiles[14].camels.push('White');
+	camelState.tiles[15].camels.push('Black');
 	while(dice.length) {
 		const dieRoll = getRandomRoll(dice);
 		camelState.tiles[dieRoll.Roll - 1].camels.push(dieRoll.color);
@@ -272,8 +276,13 @@ export const getRandomRoll = (dice: Die[]): DieRoll => {
 	const dieIndex = Math.floor(Math.random() * (dice.length));
 	const die = dice.splice(dieIndex, 1)[0];
 	const rollNumber = Math.floor(Math.random() * 3) + 1
+	
+	if(die.color === "Gray"){
+		const color = Math.random() > .5 ? "White" : "Black";
+		return {color, Roll: rollNumber as Roll};
+	}
 
-	return {...die, Roll: rollNumber as Roll};
+	return {color: die.color, Roll: rollNumber as Roll};
 };
 
 // returns every possible permutation of an array

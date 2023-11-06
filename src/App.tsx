@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import './App.css';
 import { colorToCode, parseCamel, parseDice, toCamelCode } from './camel-parser'
-import { Color, DieRoll, generateInitialState, getOdds, moveCamelUnit, OddsResult, Roll } from './camel'
+import { ChaosColor, Color, DieRoll, generateInitialState, getOdds, moveCamelUnit, OddsResult, Roll } from './camel'
 import { Results } from './results';
 
+
+const initialDice = "rguypc" ;
 interface IState {
   boardInput: string;
   diceInput: string;
@@ -15,7 +17,7 @@ function App() {
   // create a random initial state will all dice remaining
   const [state, setState] = useState<IState>({ 
     boardInput: toCamelCode(generateInitialState()), 
-    diceInput: "rguyp" 
+    diceInput: initialDice
   });
 
   const calculate = () => {
@@ -34,19 +36,20 @@ function App() {
     try {
       // option format is Color_Roll e.g. Red_1
       const selectedOption = e.target.value.split('_');
-      const color = selectedOption[0] as Color;
+      const color = selectedOption[0] as Color | ChaosColor;
       const dieRoll: DieRoll = {
         color: color,
         Roll: parseInt(selectedOption[1]) as Roll,
       }
       const camelState = parseCamel(state.boardInput);
       moveCamelUnit(camelState, dieRoll);
-
-      let remainingDice = state.diceInput.replace(colorToCode(color), '');
+  
+      const dieColor = color === 'Black' || color === 'White' ? 'Gray' : color;
+      let remainingDice = state.diceInput.replace(colorToCode(dieColor), '');
       
-      // if there are no remaining dice. Move to next round and clear the board;
-      if(!remainingDice){
-        remainingDice = 'rpguy';
+      // if there is only one die left, reset the board and remove all hazards
+      if(remainingDice.length <= 1){
+        remainingDice = initialDice;
         camelState.tiles.forEach(t => t.hazard = undefined);
       }
 
@@ -90,12 +93,25 @@ function App() {
         {state.results && 
           <select className="form-select" onChange={selectNextRoll} value='_' style={{marginTop: '10px'}}>
             <option selected disabled value='_'>Select Next Roll</option>
-            {parseDice(state.diceInput).map(d =>
-              <optgroup label={d.color}>
-                <option value={d.color + '_1'}>{d.color + ' 1'}</option>
-                <option value={d.color + '_2'}>{d.color + ' 2'}</option>
-                <option value={d.color + '_3'}>{d.color + ' 3'}</option>
-              </optgroup>
+            {parseDice(state.diceInput).map(d => {
+              const renderForColor = (color: Color | ChaosColor) => {
+                return ( 
+                  <optgroup key={color} label={color}>
+                    <option value={color + '_1'}>{color + ' 1'}</option>
+                    <option value={color + '_2'}>{color + ' 2'}</option>
+                    <option value={color + '_3'}>{color + ' 3'}</option>
+                  </optgroup>
+                  );
+              };
+              if(d.color === 'Gray'){
+                return [
+                  renderForColor("Black"),
+                  renderForColor("White"),
+                ]
+              }
+              return renderForColor(d.color);
+            }
+
             )}
           </select>
         }

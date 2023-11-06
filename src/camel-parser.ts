@@ -11,6 +11,15 @@ const codeColorMap: Map<Color | ChaosColor> = {
     "p": "Purple",
     "b": "Black"
 };
+const dieColors: Map<Color | "Gray"> = {
+    "r": "Red",
+    "u": "Blue",
+    "g": "Green",
+    "y": "Yellow",
+    "p": "Purple",
+    "c": "Gray"
+};
+
 const hazardCodeMap: Map<Hazard> = {
     "o":"Oasis",
     "d": "Desert"
@@ -57,7 +66,7 @@ export const parseCamel = (camelCode: string): CamelState => {
 };
 
 export const parseDice = (diceCode: string): Die[] => {
-    return diceCode.split("").map(c => ({ color: codeColorMap[c] }));
+    return diceCode.split("").map(c => ({ color: dieColors[c] }));
 };
 
 export const toCamelCode = (camelState: CamelState): string => {
@@ -94,7 +103,7 @@ export const toDiceCode = (dice: Die[]) => {
     return dice.map(d => colorToCode(d.color)).join('');
 };
 
-export const colorToCode = (color: Color | ChaosColor) => {
+export const colorToCode = (color: Color | "Gray" | ChaosColor) => {
     switch(color) {
         case 'Red':
             return 'r';
@@ -102,13 +111,15 @@ export const colorToCode = (color: Color | ChaosColor) => {
             return 'g';
         case 'Blue': 
             return 'u';
-        case 'White':
-            return 'w';
+        case "Gray":
+            return 'c';
         case 'Yellow':
             return 'y';
-        case 'Black':
-            return 'b';
         case 'Purple':
             return 'p';
+        case "White":
+            return 'w';
+        case "Black":
+            return "b"
     }
 };

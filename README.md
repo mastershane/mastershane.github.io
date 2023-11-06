@@ -19,9 +19,9 @@ Currently the only way to use the Camelculator is to enter in the current board 
 <li>,,: Blank Space</li>
 
 Todo: 
-X (e.g. 2, 3, 4) for multiple blank spaces
 UI to show camel board
 Support finish line in calculations
+Click shot term bets to remove color
 support chaos camels
     use correct colors in regular camels
     support white and black camels
