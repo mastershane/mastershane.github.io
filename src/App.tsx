@@ -75,6 +75,9 @@ function App() {
         <li>u: Blue Camel</li>
         <li>p: Purple Camel</li>
         <li>y: Yellow Camel</li>
+        <li>w: White Camel</li>
+        <li>b: Black Camel</li>
+        <li>c: Gray die (rolls for black or white)</li>
         <li>d: Desert</li>
         <li>o: Oasis</li>
       </ul>
