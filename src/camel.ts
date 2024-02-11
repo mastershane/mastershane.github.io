@@ -56,14 +56,12 @@ interface TileHits {
   hits: number;
 }
 
-//make this a setting v1 vs v2
-const skipLastRoll = true;
-
 // lets just calculate every outcome and get the odds of each
 export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
   //hack to remove gray rolls since we don't know how to calculate
   // const dice: GoodDie[] = allDice.filter((d) => d.color !== 'Gray') as GoodDie[];
 
+  let timelineCount = 0;
   const camelWins: Record<Color, { first: number; second: number }> = {
     Red: { first: 0, second: 0 },
     Blue: { first: 0, second: 0 },
@@ -76,7 +74,6 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
 
   const hasGray = dice.find((d) => d.color === "Gray") !== undefined;
 
-  // having all possible timelines in memory at once may be a burden - look into streaming.
   const permutations = !hasGray
     ? permute(dice.map<Color>((d) => d.color as Color))
     : permute(
@@ -87,19 +84,14 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
         permute(dice.map((d) => (d.color !== "Gray" ? d.color : "White")))
       );
 
-  const permutationRollCount = skipLastRoll
-    ? permutations.length - 1
-    : permutations.length;
-
-  const timelines: DieRoll[][] = [];
-
   // populate all timelines
   permutations.forEach((permutation) => {
     interface RollNode extends DieRoll {
       nextRolls: RollNode[];
     }
     const addDieRolls = (index: number, previousRolls?: RollNode[]) => {
-      if (index >= permutationRollCount) {
+      // todo: add option to support camel v1 instead of always subtracting 1.
+      if (index >= permutation.length - 1) {
         return [];
       }
 
@@ -129,20 +121,17 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
           traverse(r, clone);
         });
       } else {
-        timelines.push(clone);
+        timelineCount++;
+        const winners = simulateWinner(camelState, clone);
+
+        camelWins[winners.first].first = camelWins[winners.first].first + 1;
+        camelWins[winners.second].second = camelWins[winners.second].second + 1;
+        winners.tileHits.forEach((t, i) => {
+          tileHits[i].hits = tileHits[i].hits + t.hits;
+        });
       }
     };
     rollGraph.forEach((n) => traverse(n, []));
-  });
-
-  timelines.forEach((t) => {
-    const winners = simulateWinner(camelState, t);
-
-    camelWins[winners.first].first = camelWins[winners.first].first + 1;
-    camelWins[winners.second].second = camelWins[winners.second].second + 1;
-    winners.tileHits.forEach((t, i) => {
-      tileHits[i].hits = tileHits[i].hits + t.hits;
-    });
   });
 
   const getBetValue = (
@@ -157,8 +146,8 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
   const oddsResult: OddsResult = {
     camelOdds: (Object.keys(camelWins) as Array<Color>).map((k) => {
       const wins = camelWins[k];
-      const firstOdds = wins.first / timelines.length;
-      const secondOdds = wins.second / timelines.length;
+      const firstOdds = wins.first / timelineCount;
+      const secondOdds = wins.second / timelineCount;
       const camelOdds: CamelOdds = {
         camel: k as Color,
         firstPlaceOdds: firstOdds,
@@ -177,10 +166,10 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
     if (t.tile.hazard) {
       switch (t.tile.hazard) {
         case "Desert":
-          oddsResult.desertHit.push(t.hits / timelines.length);
+          oddsResult.desertHit.push(t.hits / timelineCount);
           break;
         case "Oasis":
-          oddsResult.oasisHits.push(t.hits / timelines.length);
+          oddsResult.oasisHits.push(t.hits / timelineCount);
           break;
       }
     }
