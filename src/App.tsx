@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import './App.css';
 import { colorToCode, parseCamel, parseDice, toCamelCode } from './camel-parser'
-import { ChaosColor, Color, DieRoll, generateInitialState, getOdds, moveCamelUnit, OddsResult, Roll } from './camel'
+import { CamelState, ChaosColor, Color, DieRoll, generateInitialState, getOdds, moveCamelUnit, OddsResult, Roll } from './camel'
 import { Results } from './results';
+import { Visualizer } from './Visualizer';
 
 
 const initialDice = "rguypc" ;
@@ -20,12 +21,15 @@ function App() {
     diceInput: initialDice
   });
 
+  const [camelState, setCamelState] = useState<CamelState | undefined>()
+
   const calculate = () => {
     try {
       const camelState = parseCamel(state.boardInput);
       const dice = parseDice(state.diceInput);
       const results = getOdds(camelState, dice);
       setState({...state, results, error: undefined})
+      setCamelState(camelState);
     } catch (e) {
       setState({...state, error: 'Error made during calculation'});
       console.log(e);
@@ -126,6 +130,9 @@ function App() {
         </div>
       }
       {state.results && <Results results={state.results}/>}
+      <br />
+      {camelState && <Visualizer state={camelState} />}
+      
     </div>
   );
 }
