@@ -159,3 +159,115 @@
     min-height: 84px;
   }
 }
+
+.controls-panel {
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.controls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.controls-title {
+  font-size: 1.25rem;
+  margin-bottom: 6px;
+}
+
+.controls-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dice-selector {
+  margin-top: 8px;
+}
+
+.dice-selector-prompt {
+  font-size: 14px;
+  color: #6c757d;
+  margin-bottom: 8px;
+}
+
+.dice-selector-dice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.die-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  min-width: 64px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: #f8f9fa;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.die-button:hover {
+  border-color: #adb5bd;
+}
+
+.die-button.selected {
+  border-color: #0d6efd;
+  background: #e7f1ff;
+}
+
+.die-face {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+}
+
+.dice-selector-rolls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #dee2e6;
+}
+
+.roll-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roll-group-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  min-width: 64px;
+}
+
+.roll-button {
+  min-width: 44px;
+  min-height: 40px;
+}
+
+.setup-hint,
+.notice {
+  font-size: 14px;
+  margin: 10px 0 0;
+}
+
+.camel-code-form {
+  margin: 10px 0 16px;
+}

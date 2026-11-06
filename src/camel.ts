@@ -381,25 +381,53 @@ export const moveCamelUnit = (
   return destinationIndex;
 };
 
-export const generateInitialState = (): CamelState => {
-  const dice: Die[] = [
-    { color: "Red" },
-    { color: "Green" },
-    { color: "Purple" },
-    { color: "Blue" },
-    { color: "Yellow" },
-  ];
+export const CHAOS_COLORS: Array<ChaosColor> = ["Black", "White"];
 
-  const camelState: CamelState = { tiles: [] };
-  for (let i = 0; i < 19; i++) {
-    camelState.tiles.push({ camels: [] });
+// Where a camel starts for a setup roll. Racing camels start on the space
+// shown on their die (1-3). Crazy camels start on space 16, 15 or 14 for a
+// roll of 1, 2 or 3. Camels placed on the same space stack on top.
+export const startingSpaceIndex = (
+  color: Color | ChaosColor,
+  roll: Roll
+): number =>
+  color === "White" || color === "Black" ? TRACK_LENGTH - roll : roll - 1;
+
+// returns a new state with the camel placed for its setup roll
+export const placeStartingCamel = (
+  camelState: CamelState,
+  color: Color | ChaosColor,
+  roll: Roll
+): CamelState => {
+  const tiles = camelState.tiles.map((t) => ({
+    camels: [...t.camels],
+    hazard: t.hazard,
+  }));
+  while (tiles.length < TRACK_LENGTH) {
+    tiles.push({ camels: [], hazard: undefined });
   }
-  camelState.tiles[14].camels.push("White");
-  camelState.tiles[15].camels.push("Black");
+  tiles[startingSpaceIndex(color, roll)].camels.push(color);
+  return { tiles };
+};
+
+// Random board setup following the rules: each racing die is rolled and its
+// camel placed on that space. The gray die is rolled and the crazy camel it
+// shows is placed, then it is rolled again for the other crazy camel (only
+// the number matters the second time).
+export const generateInitialState = (
+  random: () => number = Math.random
+): CamelState => {
+  const dice: Die[] = GoodColors.map((color) => ({ color }));
+
+  let camelState: CamelState = { tiles: [] };
   while (dice.length) {
-    const dieRoll = getRandomRoll(dice);
-    camelState.tiles[dieRoll.Roll - 1].camels.push(dieRoll.color);
+    const dieRoll = getRandomRoll(dice, random);
+    camelState = placeStartingCamel(camelState, dieRoll.color, dieRoll.Roll);
   }
+  const first = getRandomRoll([{ color: "Gray" }], random);
+  const second = getRandomRoll([{ color: "Gray" }], random);
+  const other: ChaosColor = first.color === "Black" ? "White" : "Black";
+  camelState = placeStartingCamel(camelState, first.color, first.Roll);
+  camelState = placeStartingCamel(camelState, other, second.Roll);
   return camelState;
 };
 
