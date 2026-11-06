@@ -260,6 +260,63 @@ export const simulateWinner = (
   throw Error("this code should not be reached");
 };
 
+interface CamelPosition {
+  tileIndex: number;
+  stackIndex: number;
+}
+
+const findCamel = (
+  camelState: CamelState,
+  color: Color | ChaosColor
+): CamelPosition | undefined => {
+  for (let t = 0; t < camelState.tiles.length; t++) {
+    const stackIndex = camelState.tiles[t].camels.indexOf(color);
+    if (stackIndex > -1) {
+      return { tileIndex: t, stackIndex };
+    }
+  }
+  return undefined;
+};
+
+// The gray die shows which crazy camel (black or white) to move, but the
+// rules override it in two cases:
+//  1. If only one crazy camel is carrying racing camels (has any racing camel
+//     above it in its stack), that crazy camel moves.
+//  2. Otherwise, if one crazy camel is directly on top of the other, the one
+//     on top moves.
+export const resolveChaosCamel = (
+  camelState: CamelState,
+  rolled: ChaosColor
+): ChaosColor => {
+  const white = findCamel(camelState, "White");
+  const black = findCamel(camelState, "Black");
+  if (!white || !black) {
+    return rolled;
+  }
+
+  const isCarrying = (position: CamelPosition) =>
+    camelState.tiles[position.tileIndex].camels
+      .slice(position.stackIndex + 1)
+      .some(isRacingCamel);
+
+  const whiteCarrying = isCarrying(white);
+  const blackCarrying = isCarrying(black);
+  if (whiteCarrying !== blackCarrying) {
+    return whiteCarrying ? "White" : "Black";
+  }
+
+  if (white.tileIndex === black.tileIndex) {
+    if (white.stackIndex === black.stackIndex + 1) {
+      return "White";
+    }
+    if (black.stackIndex === white.stackIndex + 1) {
+      return "Black";
+    }
+  }
+
+  return rolled;
+};
+
 // update the camel state based on the DieRoll
 // returns the destination index ignoring the special hazard movement
 // (or -1 if the rolled camel is not on the board)
@@ -267,8 +324,12 @@ export const moveCamelUnit = (
   camelState: CamelState,
   dieRoll: DieRoll
 ): number => {
+  const color =
+    dieRoll.color === "White" || dieRoll.color === "Black"
+      ? resolveChaosCamel(camelState, dieRoll.color)
+      : dieRoll.color;
   const tileIndex = camelState.tiles.findIndex(
-    (t) => t.camels.indexOf(dieRoll.color) > -1
+    (t) => t.camels.indexOf(color) > -1
   );
   if (tileIndex < 0) {
     // camel isn't on the board, so there is nothing to move
@@ -277,14 +338,14 @@ export const moveCamelUnit = (
   const tile = camelState.tiles[tileIndex];
 
   // getting and removing the camel unit
-  const camelUnit = tile.camels.splice(tile.camels.indexOf(dieRoll.color));
+  const camelUnit = tile.camels.splice(tile.camels.indexOf(color));
 
   const placeCamelsAtTile = (camels: (Color | ChaosColor)[], tile: Tile) => {
     camels.forEach((c) => {
       tile.camels.push(c);
     });
   };
-  const isChaos = dieRoll.color === "White" || dieRoll.color === "Black";
+  const isChaos = color === "White" || color === "Black";
   const moveIndex = (start: number, spacesAway: number) => {
     return isChaos ? start - spacesAway : start + spacesAway;
   };

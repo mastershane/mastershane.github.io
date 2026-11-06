@@ -94,7 +94,7 @@ function App() {
         <li>y: Yellow Camel</li>
         <li>w: White Camel</li>
         <li>b: Black Camel</li>
-        <li>c: Gray die (rolls for black or white)</li>
+        <li>c: Gray die (rolls for black or white; if only one of them is carrying racing camels, or one is directly on top of the other, that one moves instead)</li>
         <li>d: Desert</li>
         <li>o: Oasis</li>
       </ul>
