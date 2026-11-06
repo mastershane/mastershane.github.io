@@ -3,23 +3,13 @@ import { OddsResult } from "./camel"
 import { DEFAULT_RULES, displayName, Rules } from "./rules"
 
 
+// Background color for an expected value: red at -1 (always lose the bet),
+// yellow at 0 (break even) and green at 3 or more.
 export function getBgColor(value: number) {
-	var r, g, b = 0;
-	if(value < 1) {
-		r = 255;
-		g = Math.round(255 * ((value * .5) + -.5));
-	}
-    else if(value <=3){
-        g = 255;
-        r = Math.round(255 - 85 * value);
-    }
-    else {
-        g = 255;
-		r = 0
-    }
-
-	var h = r * 0x10000 + g * 0x100 + b * 0x1;
-	return '#' + ('000000' + h.toString(16)).slice(-6);
+    const v = Math.min(3, Math.max(-1, Number.isFinite(value) ? value : 0));
+    const red = v <= 0 ? 255 : Math.round(255 * (1 - v / 3));
+    const green = v >= 0 ? 255 : Math.round(255 * (v + 1));
+    return `rgb(${red}, ${green}, 0)`;
 }
 
 interface Props {
