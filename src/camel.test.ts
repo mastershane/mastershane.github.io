@@ -1,4 +1,5 @@
-import { getOdds, moveCamelUnit, resolveChaosCamel, simulateWinner } from "./camel";
+import { generateInitialState, getOdds, moveCamelUnit, placeStartingCamel, resolveChaosCamel, simulateWinner } from "./camel";
+import { seededRandom } from "./long-term";
 import { parseCamel, parseDice } from "./camel-parser";
 
 test("rolls after a camel finishes are ignored", () => {
@@ -77,5 +78,33 @@ describe("crazy camel rules", () => {
     const red = result.camelOdds.find((c) => c.camel === "Red")!;
     expect(red.firstPlaceOdds).toBeCloseTo(10 / 12);
     expect(yellow.firstPlaceOdds).toBeCloseTo(2 / 12);
+  });
+});
+
+describe("board setup", () => {
+  test("racing camels start on their roll and crazy camels count back from 16", () => {
+    let state = placeStartingCamel({ tiles: [] }, "Red", 2);
+    state = placeStartingCamel(state, "Blue", 2);
+    state = placeStartingCamel(state, "Black", 1);
+    state = placeStartingCamel(state, "White", 3);
+    expect(state.tiles[1].camels).toEqual(["Red", "Blue"]);
+    expect(state.tiles[15].camels).toEqual(["Black"]);
+    expect(state.tiles[13].camels).toEqual(["White"]);
+  });
+
+  test("random setup places every camel in its starting area", () => {
+    const random = seededRandom(7);
+    for (let i = 0; i < 50; i++) {
+      const state = generateInitialState(random);
+      const where = (c: string) => state.tiles.findIndex((t) => t.camels.includes(c as any));
+      ["Red", "Blue", "Green", "Yellow", "Purple"].forEach((c) => {
+        expect(where(c)).toBeGreaterThanOrEqual(0);
+        expect(where(c)).toBeLessThanOrEqual(2);
+      });
+      ["Black", "White"].forEach((c) => {
+        expect(where(c)).toBeGreaterThanOrEqual(13);
+        expect(where(c)).toBeLessThanOrEqual(15);
+      });
+    }
   });
 });
