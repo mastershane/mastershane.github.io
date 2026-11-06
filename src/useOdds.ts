@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { OddsResult } from "./camel";
 import { LongTermResult } from "./long-term";
 import { computeOdds, OddsRequest, OddsResponse } from "./odds";
+import { Edition } from "./rules";
 
 // wait this long after the last change before calculating, so quick
 // repeated clicks (e.g. oasis -> desert) only calculate once
@@ -77,14 +78,14 @@ export const useOdds = () => {
   );
 
   const request = useCallback(
-    (boardInput: string, diceInput: string, simulations: number) => {
+    (boardInput: string, diceInput: string, simulations: number, edition: Edition) => {
       const id = ++latestId.current;
       setOdds((o) => ({ ...o, calculating: true, error: undefined }));
       if (timer.current) {
         clearTimeout(timer.current);
       }
       timer.current = setTimeout(
-        () => run({ id, boardInput, diceInput, simulations }),
+        () => run({ id, boardInput, diceInput, simulations, edition }),
         DEBOUNCE_MS
       );
     },

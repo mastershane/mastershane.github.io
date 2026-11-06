@@ -12,9 +12,28 @@ import { DEFAULT_SIMULATIONS } from './long-term';
 import { LongTermResults } from './long-term-results';
 import { DieChoiceGroup, DieOption, DiceSelector } from './DiceSelector';
 import { useOdds } from './useOdds';
+import { Edition, RULES, Rules } from './rules';
 import { applyRoll as applyGameRoll, finishLeg, RollOutcome } from './game';
 
-const initialDice = "rguypc";
+const EDITION_KEY = 'camelculator-edition';
+
+// remember which edition the viewer plays; storage may be unavailable
+const loadEdition = (): Edition => {
+  try {
+    const saved = window.localStorage.getItem(EDITION_KEY);
+    return saved === 'v1' || saved === 'v2' ? saved : 'v2';
+  } catch {
+    return 'v2';
+  }
+};
+
+const saveEdition = (edition: Edition) => {
+  try {
+    window.localStorage.setItem(EDITION_KEY, edition);
+  } catch {
+    // ignore
+  }
+};
 const ROLLS: Roll[] = [1, 2, 3];
 
 type Phase = 'setup' | 'playing';
@@ -31,36 +50,48 @@ interface IState {
   notice?: string;
 }
 
-const newGameState = (simulations: string): IState => ({
+const newGameState = (simulations: string, rules: Rules): IState => ({
   phase: 'setup',
   manualSetup: false,
   boardInput: '',
-  diceInput: initialDice,
+  diceInput: rules.pyramid,
   simulations,
 });
 
 const swatch = (color: string) => `camel-${color.toLowerCase()}`;
 
 function App() {
-  const [state, setState] = useState<IState>(newGameState(String(DEFAULT_SIMULATIONS)));
+  const [edition, setEdition] = useState<Edition>(loadEdition);
+  const rules = RULES[edition];
+  const [state, setState] = useState<IState>(() => newGameState(String(DEFAULT_SIMULATIONS), RULES[loadEdition()]));
 
   // odds are calculated in the background so the board updates right away
   const { odds, request: requestOdds, clear: clearOdds } = useOdds();
   const recalculate = (boardInput: string, diceInput: string) =>
-    requestOdds(boardInput, diceInput, parseInt(state.simulations));
+    requestOdds(boardInput, diceInput, parseInt(state.simulations), edition);
 
-  const newGame = (manualSetup = false) => {
+  const newGame = (manualSetup = false, gameRules: Rules = rules) => {
     clearOdds();
-    setState({...newGameState(state.simulations), manualSetup});
+    setState({...newGameState(state.simulations, gameRules), manualSetup});
+  };
+
+  // the camels and dice differ between editions, so switching starts a new game
+  const changeEdition = (next: Edition) => {
+    if (next === edition) {
+      return;
+    }
+    setEdition(next);
+    saveEdition(next);
+    newGame(false, RULES[next]);
   };
 
   // start playing from the given board with a full pyramid
   const startGame = (boardInput: string) => {
     setState({
-      ...state, phase: 'playing', manualSetup: false, boardInput, diceInput: initialDice,
+      ...state, phase: 'playing', manualSetup: false, boardInput, diceInput: rules.pyramid,
       error: undefined, tileError: undefined, notice: undefined,
     });
-    recalculate(boardInput, initialDice);
+    recalculate(boardInput, rules.pyramid);
   };
 
   const calculate = () => {
@@ -102,7 +133,7 @@ function App() {
 
   const applyRoll = (dieRoll: DieRoll) => {
     try {
-      const outcome = applyGameRoll(state.boardInput, state.diceInput, dieRoll);
+      const outcome = applyGameRoll(state.boardInput, state.diceInput, dieRoll, rules);
       showOutcome(outcome, outcome.legEnded ? LEG_OVER : undefined);
     } catch (e) {
       setState({...state, error: 'Error made during calculation'});
@@ -113,7 +144,7 @@ function App() {
   // roll the rest of the dice in the pyramid randomly to finish the leg
   const nextRound = () => {
     try {
-      const outcome = finishLeg(state.boardInput, state.diceInput);
+      const outcome = finishLeg(state.boardInput, state.diceInput, Math.random, rules);
       const rolled = outcome.rolls.map(r => `${r.color} ${r.Roll}`).join(', ');
       const summary = rolled ? `Rolled ${rolled}.` : '';
       showOutcome(outcome, outcome.legEnded ? `${summary} ${LEG_OVER}`.trim() : summary || undefined);
@@ -126,7 +157,7 @@ function App() {
   // camels that haven't been placed on the board yet during setup
   const unplacedCamels = (): Array<Color | ChaosColor> => {
     const onBoard = new Set((trackState?.tiles ?? []).flatMap(t => t.camels));
-    return [...GoodColors, ...CHAOS_COLORS].filter(c => !onBoard.has(c));
+    return [...GoodColors, ...(rules.crazyCamels ? CHAOS_COLORS : [])].filter(c => !onBoard.has(c));
   };
 
   const placeSetupCamel = (color: Color | ChaosColor, roll: Roll) => {
@@ -199,7 +230,7 @@ function App() {
         <h2 className="controls-title">Set up the board</h2>
         <p className="text-muted">Mirror the setup of your real game, or let the calculator roll the starting positions for you.</p>
         <div className="controls-buttons">
-          <button type="button" className="btn btn-primary" onClick={() => startGame(toCamelCode(generateInitialState()))}>
+          <button type="button" className="btn btn-primary" onClick={() => startGame(toCamelCode(generateInitialState(Math.random, rules)))}>
             Roll automatically
           </button>
           <button
@@ -262,8 +293,31 @@ function App() {
 
   return (
     <div className="container">
-      <h1 className="app-title">🐪 The Camelculator 🐪</h1>
-      <p className="app-subtitle">Camel (C)up Calculator</p>
+      <header className="app-header">
+        <div>
+          <h1 className="app-title">🐪 The Camelculator 🐪</h1>
+          <p className="app-subtitle">Camel (C)up Calculator</p>
+        </div>
+        <div className="edition-toggle">
+          <div className="btn-group" role="group" aria-label="Game version">
+            {(['v1', 'v2'] as Edition[]).map(e => (
+              <button
+                key={e}
+                type="button"
+                className={`btn btn-outline-dark${edition === e ? ' active' : ''}`}
+                aria-pressed={edition === e}
+                onClick={() => changeEdition(e)}
+              >
+                {RULES[e].name}
+              </button>
+            ))}
+          </div>
+          <small className="text-muted">
+            {rules.crazyCamels ? 'Crazy camels and gray die. ' : 'No crazy camels. All 5 dice rolled each leg. '}
+            Switching starts a new game.
+          </small>
+        </div>
+      </header>
 
       <section className="track-panel">
         {trackState
@@ -321,9 +375,11 @@ function App() {
           <li>u: Blue Camel</li>
           <li>p: Purple Camel</li>
           <li>y: Yellow Camel</li>
-          <li>w: White Camel</li>
-          <li>b: Black Camel</li>
-          <li>c: Gray die (rolls for black or white; if only one of them is carrying racing camels, or one is directly on top of the other, that one moves instead)</li>
+          {rules.crazyCamels && <>
+            <li>w: White Camel</li>
+            <li>b: Black Camel</li>
+            <li>c: Gray die (rolls for black or white; if only one of them is carrying racing camels, or one is directly on top of the other, that one moves instead)</li>
+          </>}
           <li>d: Desert (−1, camels go underneath)</li>
           <li>o: Oasis (+1, camels go on top)</li>
         </ul>

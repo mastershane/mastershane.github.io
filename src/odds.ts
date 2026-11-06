@@ -1,12 +1,14 @@
 import { getOdds, OddsResult } from "./camel";
 import { parseCamel, parseDice } from "./camel-parser";
 import { DEFAULT_SIMULATIONS, getLongTermOdds, LongTermResult } from "./long-term";
+import { Edition, RULES } from "./rules";
 
 export interface OddsRequest {
   id: number;
   boardInput: string;
   diceInput: string;
   simulations: number;
+  edition: Edition;
 }
 
 export type OddsResponse =
@@ -17,11 +19,12 @@ export type OddsResponse =
 export const computeOdds = (request: OddsRequest): OddsResponse => {
   try {
     const dice = parseDice(request.diceInput);
+    const rules = RULES[request.edition];
     const simulations = request.simulations > 0 ? request.simulations : DEFAULT_SIMULATIONS;
     return {
       id: request.id,
-      results: getOdds(parseCamel(request.boardInput), dice),
-      longTermResults: getLongTermOdds(parseCamel(request.boardInput), dice, simulations),
+      results: getOdds(parseCamel(request.boardInput), dice, rules),
+      longTermResults: getLongTermOdds(parseCamel(request.boardInput), dice, simulations, Math.random, rules),
     };
   } catch (e) {
     console.log(e);

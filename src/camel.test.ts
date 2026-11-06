@@ -1,5 +1,6 @@
 import { generateInitialState, getOdds, moveCamelUnit, placeStartingCamel, resolveChaosCamel, simulateWinner } from "./camel";
 import { seededRandom } from "./long-term";
+import { RULES } from "./rules";
 import { parseCamel, parseDice } from "./camel-parser";
 
 test("rolls after a camel finishes are ignored", () => {
@@ -106,5 +107,26 @@ describe("board setup", () => {
         expect(where(c)).toBeLessThanOrEqual(15);
       });
     }
+  });
+});
+
+describe("version 1 rules", () => {
+  test("every die is rolled in the leg", () => {
+    const state = parseCamel("r,g");
+    const v1 = getOdds(state, parseDice("rg"), RULES.v1);
+    const v2 = getOdds(state, parseDice("rg"), RULES.v2);
+    const red = (r: typeof v1) => r.camelOdds.find((c) => c.camel === "Red")!.firstPlaceOdds;
+    // v2 rolls one die: red only wins if red is rolled (any number)
+    expect(red(v2)).toBeCloseTo(0.5);
+    // v1 rolls both dice, which changes the odds
+    expect(red(v1)).not.toBeCloseTo(red(v2));
+  });
+
+  test("random setup has no crazy camels", () => {
+    const state = generateInitialState(seededRandom(4), RULES.v1);
+    const camels = state.tiles.flatMap((t) => t.camels);
+    expect(camels).toHaveLength(5);
+    expect(camels).not.toContain("Black");
+    expect(camels).not.toContain("White");
   });
 });
