@@ -11,8 +11,8 @@
 // Assumptions made for the simulated future legs:
 //  - The current leg continues with the remaining dice and the current
 //    desert / oasis tiles.
-//  - Every later leg uses all six dice (five racing colors + gray) and, like
-//    the current leg, ends when only one die is left in the pyramid.
+//  - Every later leg starts with a full pyramid and, like the current leg,
+//    ends by the rules of the edition being played (see rules.ts).
 //  - No desert / oasis tiles are placed in later legs (we can't know where
 //    players will put them), since tiles are removed at the end of a leg.
 //  - The game ends immediately when a racing camel crosses the finish line.
@@ -27,6 +27,8 @@ import {
   isRacingCamel,
   moveCamelUnit,
 } from "./camel";
+import { parseDice } from "./camel-parser";
+import { DEFAULT_RULES, Rules } from "./rules";
 
 // payouts for the 1st, 2nd, 3rd... correct long term bet on a camel.
 // Every incorrect long term bet loses 1.
@@ -37,14 +39,6 @@ export const DEFAULT_SIMULATIONS = 20000;
 // guards against a pathological game that never ends
 const MAX_ROLLS_PER_GAME = 1000;
 
-const fullPyramid = (): Die[] => [
-  { color: "Red" },
-  { color: "Blue" },
-  { color: "Green" },
-  { color: "Yellow" },
-  { color: "Purple" },
-  { color: "Gray" },
-];
 
 export interface LongTermCamelOdds {
   camel: Color;
@@ -94,30 +88,31 @@ export const getRanking = (camelState: CamelState): Color[] => {
   return ranking;
 };
 
-const startNewLeg = (camelState: CamelState): Die[] => {
+const startNewLeg = (camelState: CamelState, rules: Rules): Die[] => {
   camelState.tiles.forEach((t) => (t.hazard = undefined));
-  return fullPyramid();
+  return parseDice(rules.pyramid, rules);
 };
 
 // play a single random game from the given state until a camel finishes
 export const simulateGame = (
   camelState: CamelState,
   dice: Die[],
-  random: () => number = Math.random
+  random: () => number = Math.random,
+  rules: Rules = DEFAULT_RULES
 ): GameOutcome => {
   const state = cloneState(camelState);
   let pyramid: Die[] = dice.map((d) => ({ ...d }));
   let legs = 1;
 
-  if (pyramid.length <= 1) {
+  if (pyramid.length <= rules.diceLeftAtLegEnd) {
     // the current leg is already over
-    pyramid = startNewLeg(state);
+    pyramid = startNewLeg(state, rules);
   }
 
   let rolls = 0;
   while (!hasFinished(state) && rolls < MAX_ROLLS_PER_GAME) {
-    if (pyramid.length <= 1) {
-      pyramid = startNewLeg(state);
+    if (pyramid.length <= rules.diceLeftAtLegEnd) {
+      pyramid = startNewLeg(state, rules);
       legs++;
     }
     moveCamelUnit(state, getRandomRoll(pyramid, random));
@@ -135,7 +130,8 @@ export const getLongTermOdds = (
   camelState: CamelState,
   dice: Die[],
   simulations: number = DEFAULT_SIMULATIONS,
-  random: () => number = Math.random
+  random: () => number = Math.random,
+  rules: Rules = DEFAULT_RULES
 ): LongTermResult => {
   const racingCamels = getRanking(camelState);
   if (racingCamels.length < 2) {
@@ -151,7 +147,7 @@ export const getLongTermOdds = (
 
   let totalLegs = 0;
   for (let i = 0; i < simulations; i++) {
-    const outcome = simulateGame(camelState, dice, random);
+    const outcome = simulateGame(camelState, dice, random, rules);
     wins[outcome.first]++;
     losses[outcome.last]++;
     totalLegs += outcome.legs;

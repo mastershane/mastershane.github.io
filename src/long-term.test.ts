@@ -1,5 +1,6 @@
 import { moveCamelUnit } from "./camel";
 import { parseCamel, parseDice } from "./camel-parser";
+import { RULES } from "./rules";
 import { getLongTermOdds, getRanking, seededRandom, simulateGame } from "./long-term";
 
 test("odds sum to one and values follow the odds", () => {
@@ -75,4 +76,12 @@ test("simulations run quickly from a fresh board", () => {
   getLongTermOdds(state, parseDice("rguypc"), 20000, seededRandom(5));
   const elapsed = Date.now() - start;
   expect(elapsed).toBeLessThan(5000);
+});
+
+test("version 1 games never use the gray die", () => {
+  const state = parseCamel("rgu,,yw", RULES.v1);
+  const result = getLongTermOdds(state, parseDice("rguyw", RULES.v1), 2000, seededRandom(6), RULES.v1);
+  expect(result.camelOdds.reduce((sum, c) => sum + c.winOdds, 0)).toBeCloseTo(1);
+  // 5 dice per leg moving 2 on average: games take a few legs
+  expect(result.averageLegs).toBeGreaterThan(2);
 });

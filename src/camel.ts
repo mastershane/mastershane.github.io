@@ -1,3 +1,5 @@
+import { DEFAULT_RULES, Rules } from "./rules";
+
 export type Color = "Red" | "Blue" | "Green" | "Yellow" | "Purple";
 export type ChaosColor = "White" | "Black";
 export type Roll = 1 | 2 | 3;
@@ -76,7 +78,11 @@ interface TileHits {
 }
 
 // lets just calculate every outcome and get the odds of each
-export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
+export const getOdds = (
+  camelState: CamelState,
+  dice: Die[],
+  rules: Rules = DEFAULT_RULES
+): OddsResult => {
   //hack to remove gray rolls since we don't know how to calculate
   // const dice: GoodDie[] = allDice.filter((d) => d.color !== 'Gray') as GoodDie[];
 
@@ -110,8 +116,8 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
       nextRolls: RollNode[];
     }
     const addDieRolls = (index: number, previousRolls?: RollNode[]) => {
-      // todo: add option to support camel v1 instead of always subtracting 1.
-      if (index >= permutation.length - 1) {
+      // the leg ends once only rules.diceLeftAtLegEnd dice are left
+      if (index >= permutation.length - rules.diceLeftAtLegEnd) {
         return [];
       }
 
@@ -414,7 +420,8 @@ export const placeStartingCamel = (
 // shows is placed, then it is rolled again for the other crazy camel (only
 // the number matters the second time).
 export const generateInitialState = (
-  random: () => number = Math.random
+  random: () => number = Math.random,
+  rules: Rules = DEFAULT_RULES
 ): CamelState => {
   const dice: Die[] = GoodColors.map((color) => ({ color }));
 
@@ -422,6 +429,9 @@ export const generateInitialState = (
   while (dice.length) {
     const dieRoll = getRandomRoll(dice, random);
     camelState = placeStartingCamel(camelState, dieRoll.color, dieRoll.Roll);
+  }
+  if (!rules.crazyCamels) {
+    return camelState;
   }
   const first = getRandomRoll([{ color: "Gray" }], random);
   const second = getRandomRoll([{ color: "Gray" }], random);

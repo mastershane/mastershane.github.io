@@ -103,6 +103,7 @@
 .camel-green { background: #43a047; }
 .camel-yellow { background: #fdd835; }
 .camel-purple { background: #8e24aa; }
+.camel-orange { background: #fb8c00; }
 .camel-white { background: #ffffff; }
 .camel-black { background: #212121; }
 .camel-gray { background: #9e9e9e; }
@@ -284,4 +285,38 @@
 .results-stale {
   opacity: 0.5;
   transition: opacity 0.15s;
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.app-header .app-subtitle {
+  margin-bottom: 0;
+}
+
+.edition-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.edition-toggle small {
+  text-align: right;
+}
+
+@media (max-width: 576px) {
+  .edition-toggle {
+    align-items: flex-start;
+  }
+  .edition-toggle small {
+    text-align: left;
+  }
 }

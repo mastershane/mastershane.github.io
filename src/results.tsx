@@ -1,31 +1,23 @@
 import React from 'react';
 import { OddsResult } from "./camel"
+import { DEFAULT_RULES, displayName, Rules } from "./rules"
 
 
+// Background color for an expected value: red at -1 (always lose the bet),
+// yellow at 0 (break even) and green at 3 or more.
 export function getBgColor(value: number) {
-	var r, g, b = 0;
-	if(value < 1) {
-		r = 255;
-		g = Math.round(255 * ((value * .5) + -.5));
-	}
-    else if(value <=3){
-        g = 255;
-        r = Math.round(255 - 85 * value);
-    }
-    else {
-        g = 255;
-		r = 0
-    }
-
-	var h = r * 0x10000 + g * 0x100 + b * 0x1;
-	return '#' + ('000000' + h.toString(16)).slice(-6);
+    const v = Math.min(3, Math.max(-1, Number.isFinite(value) ? value : 0));
+    const red = v <= 0 ? 255 : Math.round(255 * (1 - v / 3));
+    const green = v >= 0 ? 255 : Math.round(255 * (v + 1));
+    return `rgb(${red}, ${green}, 0)`;
 }
 
 interface Props {
     results: OddsResult
+    rules?: Rules
 }
 
-export const Results = ({ results }: Props) => {
+export const Results = ({ results, rules = DEFAULT_RULES }: Props) => {
     return <>
         <table className="table table-bordered">
             <thead>
@@ -41,7 +33,7 @@ export const Results = ({ results }: Props) => {
             <tbody>
                 {results.camelOdds.map(r =>
                     <tr key={r.camel}>
-                        <th scope="row">{r.camel}</th>
+                        <th scope="row">{displayName(r.camel, rules)}</th>
                         <td style={{backgroundColor: getBgColor(r.fiveValue)}}>{+r.fiveValue.toFixed(3)}</td>
                         <td style={{backgroundColor: getBgColor(r.threeValue)}}>{+r.threeValue.toFixed(3)}</td>
                         <td style={{backgroundColor: getBgColor(r.twoValue)}}>{+r.twoValue.toFixed(3)}</td>
