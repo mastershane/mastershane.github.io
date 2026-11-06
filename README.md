@@ -7,6 +7,10 @@ Link Here: [Camelculator](https://mastershane.github.io/build/)
 
 Currently the only way to use the Camelculator is to enter in the current board state and dice state using Camel Code. Squares on the board are separated by a comma (",") going to the goal from left to right. Camels stack within a square with the rightmost camel on the top. Here is an example of Camel Code where yellow is winning `rw,,o,gby`. The dice state needs the remaining dice that have not been rolled. Each round would start something like this `rwgby`.
 
+### Long Term Bets
+
+Overall winner / loser odds are estimated by playing the rest of the game out thousands of times with random dice (Monte Carlo simulation) and counting how often each camel finishes first and last. The number of simulated games can be changed in the UI; 20,000 games gives odds within about ±0.7%. Future legs assume all six dice are used and no desert / oasis tiles are placed. Expected values are shown for each long term payout (8, 5, 3, 2, 1), since the payout depends on how many correct bets were placed on that camel before yours.
+
 ### Camel Code Key
 
 <li>r: Red Camel or Die</li>

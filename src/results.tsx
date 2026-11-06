@@ -2,7 +2,7 @@ import React from 'react';
 import { OddsResult } from "./camel"
 
 
-function getBgColor(value: number) {
+export function getBgColor(value: number) {
 	var r, g, b = 0;
 	if(value < 1) {
 		r = 255;

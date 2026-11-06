@@ -3,7 +3,11 @@ export type ChaosColor = "White" | "Black";
 export type Roll = 1 | 2 | 3;
 export type Hazard = "Desert" | "Oasis";
 
-const GoodColors: Array<Color> = ["Red", "Blue", "Green", "Yellow", "Purple"];
+export const GoodColors: Array<Color> = ["Red", "Blue", "Green", "Yellow", "Purple"];
+
+// number of spaces on the race track. A racing camel that moves to an index
+// >= TRACK_LENGTH has crossed the finish line.
+export const TRACK_LENGTH = 16;
 
 // tslint:disable: interface-name
 export interface Camel {
@@ -199,7 +203,7 @@ export const simulateWinner = (
   // update the state after each die roll in the timeline
   timeLine.forEach((roll) => {
     const hitIndex = moveCamelUnit(cloneState, roll);
-    if (hitIndex < tileHits.length) {
+    if (hitIndex >= 0 && hitIndex < tileHits.length) {
       tileHits[hitIndex].hits++;
     }
   });
@@ -229,6 +233,7 @@ export const simulateWinner = (
 
 // update the camel state based on the DieRoll
 // returns the destination index ignoring the special hazard movement
+// (or -1 if the rolled camel is not on the board)
 export const moveCamelUnit = (
   camelState: CamelState,
   dieRoll: DieRoll
@@ -236,6 +241,10 @@ export const moveCamelUnit = (
   const tileIndex = camelState.tiles.findIndex(
     (t) => t.camels.indexOf(dieRoll.color) > -1
   );
+  if (tileIndex < 0) {
+    // camel isn't on the board, so there is nothing to move
+    return -1;
+  }
   const tile = camelState.tiles[tileIndex];
 
   // getting and removing the camel unit
@@ -250,12 +259,21 @@ export const moveCamelUnit = (
   const moveIndex = (start: number, spacesAway: number) => {
     return isChaos ? start - spacesAway : start + spacesAway;
   };
-  const destinationIndex = moveIndex(tileIndex, dieRoll.Roll);
+  // chaos camels that move backwards past the first space wrap around to the
+  // end of the track. Make sure the board is long enough for any destination
+  // (e.g. camels moving past the finish line).
+  const getTile = (index: number): Tile => {
+    while (camelState.tiles.length <= index) {
+      camelState.tiles.push({ camels: [] });
+    }
+    return camelState.tiles[index];
+  };
+  const wrap = (index: number) => (index < 0 ? index + TRACK_LENGTH : index);
+  const destinationIndex = wrap(moveIndex(tileIndex, dieRoll.Roll));
 
-  const destinationTile = camelState.tiles[destinationIndex];
+  const destinationTile = getTile(destinationIndex);
   if (destinationTile.hazard === "Desert") {
-    const specialDestination =
-      camelState.tiles[moveIndex(destinationIndex, -1)];
+    const specialDestination = getTile(wrap(moveIndex(destinationIndex, -1)));
 
     // make sure that the moving camel unit is placed under the other camels
     const otherCamels = specialDestination.camels;
@@ -264,9 +282,8 @@ export const moveCamelUnit = (
     placeCamelsAtTile(camelUnit, specialDestination);
     placeCamelsAtTile(otherCamels, specialDestination);
   } else if (destinationTile.hazard === "Oasis") {
-    const specialDestinationIndex = moveIndex(destinationIndex, -1);
-
-    const specialDestination = camelState.tiles[specialDestinationIndex];
+    // oasis moves the camel unit one space further and places it on top
+    const specialDestination = getTile(wrap(moveIndex(destinationIndex, 1)));
     placeCamelsAtTile(camelUnit, specialDestination);
   } else {
     placeCamelsAtTile(camelUnit, destinationTile);
@@ -297,13 +314,16 @@ export const generateInitialState = (): CamelState => {
 };
 
 // note: this will actually modify the dice array in the parameter
-export const getRandomRoll = (dice: Die[]): DieRoll => {
-  const dieIndex = Math.floor(Math.random() * dice.length);
+export const getRandomRoll = (
+  dice: Die[],
+  random: () => number = Math.random
+): DieRoll => {
+  const dieIndex = Math.floor(random() * dice.length);
   const die = dice.splice(dieIndex, 1)[0];
-  const rollNumber = Math.floor(Math.random() * 3) + 1;
+  const rollNumber = Math.floor(random() * 3) + 1;
 
   if (die.color === "Gray") {
-    const color = Math.random() > 0.5 ? "White" : "Black";
+    const color = random() < 0.5 ? "White" : "Black";
     return { color, Roll: rollNumber as Roll };
   }
 
