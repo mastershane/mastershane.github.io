@@ -2,7 +2,7 @@ import React from 'react';
 import { OddsResult } from "./camel"
 
 
-function getBgColor(value: number) {
+export function getBgColor(value: number) {
 	var r, g, b = 0;
 	if(value < 1) {
 		r = 255;
@@ -51,6 +51,9 @@ export const Results = ({ results }: Props) => {
                 )}
             </tbody>
         </table>
+        {results.gameEndOdds > 0 &&
+            <div>Odds the game ends this leg: {+(results.gameEndOdds * 100).toFixed(1)}%</div>
+        }
         {results.desertHit.map((d, i) =>
             <div>Desert {i + 1} value: {+d.toFixed(3)}</div>
         )}

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import './App.css';
 import { colorToCode, parseCamel, parseDice, toCamelCode } from './camel-parser'
-import { CamelState, ChaosColor, Color, DieRoll, generateInitialState, getOdds, moveCamelUnit, OddsResult, Roll } from './camel'
+import { CamelState, ChaosColor, Color, DieRoll, generateInitialState, getOdds, hasFinished, moveCamelUnit, OddsResult, Roll } from './camel'
 import { Results } from './results';
 import { Visualizer } from './Visualizer';
+import { DEFAULT_SIMULATIONS, getLongTermOdds, LongTermResult } from './long-term';
+import { LongTermResults } from './long-term-results';
 
 
 const initialDice = "rguypc" ;
@@ -11,6 +13,8 @@ interface IState {
   boardInput: string;
   diceInput: string;
   results?: OddsResult;
+  longTermResults?: LongTermResult;
+  simulations: string;
   error?: string;
 }
 function App() {
@@ -18,8 +22,14 @@ function App() {
   // create a random initial state will all dice remaining
   const [state, setState] = useState<IState>({ 
     boardInput: toCamelCode(generateInitialState()), 
-    diceInput: initialDice
+    diceInput: initialDice,
+    simulations: String(DEFAULT_SIMULATIONS),
   });
+
+  const runLongTerm = (camelState: CamelState, dice: ReturnType<typeof parseDice>) => {
+    const simulations = parseInt(state.simulations);
+    return getLongTermOdds(camelState, dice, simulations > 0 ? simulations : DEFAULT_SIMULATIONS);
+  };
 
   const [camelState, setCamelState] = useState<CamelState | undefined>()
 
@@ -28,7 +38,8 @@ function App() {
       const camelState = parseCamel(state.boardInput);
       const dice = parseDice(state.diceInput);
       const results = getOdds(camelState, dice);
-      setState({...state, results, error: undefined})
+      const longTermResults = runLongTerm(camelState, dice);
+      setState({...state, results, longTermResults, error: undefined})
       setCamelState(camelState);
     } catch (e) {
       setState({...state, error: 'Error made during calculation'});
@@ -59,7 +70,9 @@ function App() {
 
       const dice = parseDice(remainingDice);
       const results = getOdds(camelState, dice);
-      setState({boardInput: toCamelCode(camelState), diceInput: remainingDice, results});
+      const longTermResults = runLongTerm(camelState, dice);
+      setState({...state, boardInput: toCamelCode(camelState), diceInput: remainingDice, results, longTermResults, error: undefined});
+      setCamelState(camelState);
 
     } catch(e) {
       setState({...state, error: 'Error made during calculation'});
@@ -81,7 +94,7 @@ function App() {
         <li>y: Yellow Camel</li>
         <li>w: White Camel</li>
         <li>b: Black Camel</li>
-        <li>c: Gray die (rolls for black or white)</li>
+        <li>c: Gray die (rolls for black or white; if only one of them is carrying racing camels, or one is directly on top of the other, that one moves instead)</li>
         <li>d: Desert</li>
         <li>o: Oasis</li>
       </ul>
@@ -94,6 +107,10 @@ function App() {
         <div className="form-group">  
           <label htmlFor="dice">Remaining Dice </label>
           <input className="form-control" type="text" id="dice" spellCheck="false" value={state.diceInput} onChange={(e) => setState({...state, diceInput: e.target.value})} /> 
+        </div>
+        <div className="form-group">
+          <label htmlFor="simulations">Long Term Simulations </label>
+          <input className="form-control" type="number" min="1" id="simulations" value={state.simulations} onChange={(e) => setState({...state, simulations: e.target.value})} />
         </div>
         <br />
         <input className="btn btn-primary" type="submit" value="Calculate!"/>
@@ -129,7 +146,14 @@ function App() {
           {state.error}
         </div>
       }
-      {state.results && <Results results={state.results}/>}
+      {camelState && hasFinished(camelState) &&
+        <div className="alert alert-success" role="alert">
+          A camel has crossed the finish line. The game is over!
+        </div>
+      }
+      {state.results && <><h3>Leg Bets</h3><Results results={state.results}/></>}
+      <br />
+      {state.longTermResults && <><h3>Long Term Bets</h3><LongTermResults results={state.longTermResults}/></>}
       <br />
       {camelState && <Visualizer state={camelState} />}
       
