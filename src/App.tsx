@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import './App.css';
-import { colorToCode, parseCamel, parseDice, toCamelCode } from './camel-parser'
+import { parseCamel, parseDice, toCamelCode } from './camel-parser'
 import {
   CamelState, ChaosColor, CHAOS_COLORS, Color, DieRoll, generateInitialState, GoodColors,
-  hasFinished, moveCamelUnit, placeStartingCamel, Roll,
+  hasFinished, placeStartingCamel, Roll,
 } from './camel'
 import { Results } from './results';
 import { DiceChips, Track } from './Track';
@@ -12,6 +12,7 @@ import { DEFAULT_SIMULATIONS } from './long-term';
 import { LongTermResults } from './long-term-results';
 import { DieChoiceGroup, DieOption, DiceSelector } from './DiceSelector';
 import { useOdds } from './useOdds';
+import { applyRoll as applyGameRoll, finishLeg, RollOutcome } from './game';
 
 const initialDice = "rguypc";
 const ROLLS: Roll[] = [1, 2, 3];
@@ -92,25 +93,30 @@ function App() {
     }
   };
 
+  const LEG_OVER = 'The leg is over. All dice are back in the pyramid and the desert / oasis tiles were removed.';
+
+  const showOutcome = (outcome: RollOutcome, notice?: string) => {
+    setState({...state, boardInput: outcome.boardInput, diceInput: outcome.diceInput, error: undefined, tileError: undefined, notice});
+    recalculate(outcome.boardInput, outcome.diceInput);
+  };
+
   const applyRoll = (dieRoll: DieRoll) => {
     try {
-      const camelState = parseCamel(state.boardInput);
-      moveCamelUnit(camelState, dieRoll);
+      const outcome = applyGameRoll(state.boardInput, state.diceInput, dieRoll);
+      showOutcome(outcome, outcome.legEnded ? LEG_OVER : undefined);
+    } catch (e) {
+      setState({...state, error: 'Error made during calculation'});
+      console.log(e);
+    }
+  };
 
-      const dieColor = dieRoll.color === 'Black' || dieRoll.color === 'White' ? 'Gray' : dieRoll.color;
-      let remainingDice = state.diceInput.replace(colorToCode(dieColor), '');
-      let notice: string | undefined;
-
-      // if there is only one die left, the leg is over: refill the pyramid and remove all tiles
-      if (remainingDice.length <= 1 && !hasFinished(camelState)) {
-        remainingDice = initialDice;
-        camelState.tiles.forEach(t => t.hazard = undefined);
-        notice = 'The leg is over. All dice are back in the pyramid and the desert / oasis tiles were removed.';
-      }
-
-      const boardInput = toCamelCode(camelState);
-      setState({...state, boardInput, diceInput: remainingDice, error: undefined, tileError: undefined, notice});
-      recalculate(boardInput, remainingDice);
+  // roll the rest of the dice in the pyramid randomly to finish the leg
+  const nextRound = () => {
+    try {
+      const outcome = finishLeg(state.boardInput, state.diceInput);
+      const rolled = outcome.rolls.map(r => `${r.color} ${r.Roll}`).join(', ');
+      const summary = rolled ? `Rolled ${rolled}.` : '';
+      showOutcome(outcome, outcome.legEnded ? `${summary} ${LEG_OVER}`.trim() : summary || undefined);
     } catch (e) {
       setState({...state, error: 'Error made during calculation'});
       console.log(e);
@@ -232,9 +238,16 @@ function App() {
     <section className="controls-panel">
       <div className="controls-header">
         <h2 className="controls-title">{gameOver ? 'Game over' : 'Next roll'}</h2>
-        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => newGame()}>
-          New game
-        </button>
+        <div className="controls-buttons mb-0">
+          {!gameOver && (
+            <button type="button" className="btn btn-outline-primary btn-sm" onClick={nextRound} title="Roll the remaining dice automatically to finish this leg">
+              Next round
+            </button>
+          )}
+          <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => newGame()}>
+            New game
+          </button>
+        </div>
       </div>
       {gameOver ? (
         <div className="alert alert-success mb-0" role="alert">
@@ -243,7 +256,7 @@ function App() {
       ) : (
         <DiceSelector dice={pyramidDice()} prompt="Click the die that came out of the pyramid, then the number it rolled." />
       )}
-      {state.notice && !gameOver && <div className="notice text-muted">{state.notice}</div>}
+      {state.notice && <div className="notice text-muted">{state.notice}</div>}
     </section>
   );
 
