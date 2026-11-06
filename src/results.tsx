@@ -51,6 +51,9 @@ export const Results = ({ results }: Props) => {
                 )}
             </tbody>
         </table>
+        {results.gameEndOdds > 0 &&
+            <div>Odds the game ends this leg: {+(results.gameEndOdds * 100).toFixed(1)}%</div>
+        }
         {results.desertHit.map((d, i) =>
             <div>Desert {i + 1} value: {+d.toFixed(3)}</div>
         )}

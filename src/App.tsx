@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './App.css';
 import { colorToCode, parseCamel, parseDice, toCamelCode } from './camel-parser'
-import { CamelState, ChaosColor, Color, DieRoll, generateInitialState, getOdds, moveCamelUnit, OddsResult, Roll } from './camel'
+import { CamelState, ChaosColor, Color, DieRoll, generateInitialState, getOdds, hasFinished, moveCamelUnit, OddsResult, Roll } from './camel'
 import { Results } from './results';
 import { Visualizer } from './Visualizer';
 import { DEFAULT_SIMULATIONS, getLongTermOdds, LongTermResult } from './long-term';
@@ -144,6 +144,11 @@ function App() {
       {state.error && 
         <div className="alert alert-danger" role="alert">
           {state.error}
+        </div>
+      }
+      {camelState && hasFinished(camelState) &&
+        <div className="alert alert-success" role="alert">
+          A camel has crossed the finish line. The game is over!
         </div>
       }
       {state.results && <><h3>Leg Bets</h3><Results results={state.results}/></>}

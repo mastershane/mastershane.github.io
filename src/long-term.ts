@@ -23,8 +23,9 @@ import {
   Die,
   getRandomRoll,
   GoodColors,
+  hasFinished,
+  isRacingCamel,
   moveCamelUnit,
-  TRACK_LENGTH,
 } from "./camel";
 
 // payouts for the 1st, 2nd, 3rd... correct long term bet on a camel.
@@ -77,8 +78,6 @@ const cloneState = (camelState: CamelState): CamelState => ({
   })),
 });
 
-const isRacingCamel = (c: string): c is Color =>
-  GoodColors.includes(c as Color);
 
 // racing camels ordered from first place to last place
 export const getRanking = (camelState: CamelState): Color[] => {
@@ -93,15 +92,6 @@ export const getRanking = (camelState: CamelState): Color[] => {
     }
   }
   return ranking;
-};
-
-const hasFinished = (camelState: CamelState): boolean => {
-  for (let t = TRACK_LENGTH; t < camelState.tiles.length; t++) {
-    if (camelState.tiles[t].camels.some(isRacingCamel)) {
-      return true;
-    }
-  }
-  return false;
 };
 
 const startNewLeg = (camelState: CamelState): Die[] => {

@@ -9,6 +9,19 @@ export const GoodColors: Array<Color> = ["Red", "Blue", "Green", "Yellow", "Purp
 // >= TRACK_LENGTH has crossed the finish line.
 export const TRACK_LENGTH = 16;
 
+export const isRacingCamel = (c: string): c is Color =>
+  GoodColors.includes(c as Color);
+
+// true once any racing camel has crossed the finish line
+export const hasFinished = (camelState: CamelState): boolean => {
+  for (let t = TRACK_LENGTH; t < camelState.tiles.length; t++) {
+    if (camelState.tiles[t].camels.some(isRacingCamel)) {
+      return true;
+    }
+  }
+  return false;
+};
+
 // tslint:disable: interface-name
 export interface Camel {
   color: Color | ChaosColor;
@@ -53,6 +66,8 @@ export interface OddsResult {
   camelOdds: CamelOdds[];
   desertHit: number[];
   oasisHits: number[];
+  // odds that a camel crosses the finish line during this leg
+  gameEndOdds: number;
 }
 
 interface TileHits {
@@ -66,6 +81,7 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
   // const dice: GoodDie[] = allDice.filter((d) => d.color !== 'Gray') as GoodDie[];
 
   let timelineCount = 0;
+  let gameEndCount = 0;
   const camelWins: Record<Color, { first: number; second: number }> = {
     Red: { first: 0, second: 0 },
     Blue: { first: 0, second: 0 },
@@ -127,6 +143,9 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
       } else {
         timelineCount++;
         const winners = simulateWinner(camelState, clone);
+        if (winners.gameEnded) {
+          gameEndCount++;
+        }
 
         camelWins[winners.first].first = camelWins[winners.first].first + 1;
         camelWins[winners.second].second = camelWins[winners.second].second + 1;
@@ -165,6 +184,7 @@ export const getOdds = (camelState: CamelState, dice: Die[]): OddsResult => {
     }),
     desertHit: [],
     oasisHits: [],
+    gameEndOdds: gameEndCount / timelineCount,
   };
   tileHits.forEach((t) => {
     if (t.tile.hazard) {
@@ -189,6 +209,7 @@ export const simulateWinner = (
   first: Color;
   second: Color;
   tileHits: TileHits[];
+  gameEnded: boolean;
 } => {
   const cloneState: CamelState = {
     tiles: [
@@ -200,13 +221,20 @@ export const simulateWinner = (
   };
 
   const tileHits = camelState.tiles.map((t, i) => ({ tile: t, hits: 0 }));
-  // update the state after each die roll in the timeline
-  timeLine.forEach((roll) => {
+  // update the state after each die roll in the timeline. The game (and so
+  // the leg) ends as soon as a racing camel crosses the finish line, so any
+  // rolls after that never happen and don't affect the bets.
+  let gameEnded = hasFinished(cloneState);
+  for (const roll of timeLine) {
+    if (gameEnded) {
+      break;
+    }
     const hitIndex = moveCamelUnit(cloneState, roll);
     if (hitIndex >= 0 && hitIndex < tileHits.length) {
       tileHits[hitIndex].hits++;
     }
-  });
+    gameEnded = hasFinished(cloneState);
+  }
 
   const winners: Color[] = [];
 
@@ -224,6 +252,7 @@ export const simulateWinner = (
           first: winners[0],
           second: winners[1],
           tileHits,
+          gameEnded,
         };
       }
     }
