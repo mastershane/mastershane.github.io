@@ -3,7 +3,8 @@ import './App.css';
 import { colorToCode, parseCamel, parseDice, toCamelCode } from './camel-parser'
 import { CamelState, ChaosColor, Color, DieRoll, generateInitialState, getOdds, hasFinished, moveCamelUnit, OddsResult, Roll } from './camel'
 import { Results } from './results';
-import { Visualizer } from './Visualizer';
+import { DiceChips, Track } from './Track';
+import { toggleHazard } from './hazards';
 import { DEFAULT_SIMULATIONS, getLongTermOdds, LongTermResult } from './long-term';
 import { LongTermResults } from './long-term-results';
 
@@ -16,6 +17,7 @@ interface IState {
   longTermResults?: LongTermResult;
   simulations: string;
   error?: string;
+  tileError?: string;
 }
 function App() {
 
@@ -31,20 +33,51 @@ function App() {
     return getLongTermOdds(camelState, dice, simulations > 0 ? simulations : DEFAULT_SIMULATIONS);
   };
 
-  const [camelState, setCamelState] = useState<CamelState | undefined>()
+  const computeResults = (boardInput: string, diceInput: string) => {
+    const dice = parseDice(diceInput);
+    return {
+      results: getOdds(parseCamel(boardInput), dice),
+      longTermResults: runLongTerm(parseCamel(boardInput), dice),
+    };
+  };
 
   const calculate = () => {
     try {
-      const camelState = parseCamel(state.boardInput);
-      const dice = parseDice(state.diceInput);
-      const results = getOdds(camelState, dice);
-      const longTermResults = runLongTerm(camelState, dice);
-      setState({...state, results, longTermResults, error: undefined})
-      setCamelState(camelState);
+      setState({...state, ...computeResults(state.boardInput, state.diceInput), error: undefined, tileError: undefined});
     } catch (e) {
       setState({...state, error: 'Error made during calculation'});
       console.log(e);
     }
+  };
+
+  // the track is drawn from whatever is in the camel code box
+  let trackState: CamelState | undefined;
+  try {
+    trackState = parseCamel(state.boardInput);
+  } catch {
+    trackState = undefined;
+  }
+
+  const onSpaceClick = (index: number) => {
+    if (!trackState) {
+      return;
+    }
+    const toggled = toggleHazard(trackState, index);
+    if ('error' in toggled) {
+      setState({...state, tileError: toggled.error});
+      return;
+    }
+    const boardInput = toCamelCode(toggled.state);
+    // keep the odds in sync with the board if they were already calculated
+    if (state.results) {
+      try {
+        setState({...state, boardInput, ...computeResults(boardInput, state.diceInput), error: undefined, tileError: undefined});
+        return;
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    setState({...state, boardInput, tileError: undefined});
   };
 
   const selectNextRoll = (e: any) => {
@@ -71,8 +104,7 @@ function App() {
       const dice = parseDice(remainingDice);
       const results = getOdds(camelState, dice);
       const longTermResults = runLongTerm(camelState, dice);
-      setState({...state, boardInput: toCamelCode(camelState), diceInput: remainingDice, results, longTermResults, error: undefined});
-      setCamelState(camelState);
+      setState({...state, boardInput: toCamelCode(camelState), diceInput: remainingDice, results, longTermResults, error: undefined, tileError: undefined});
 
     } catch(e) {
       setState({...state, error: 'Error made during calculation'});
@@ -80,25 +112,30 @@ function App() {
     }
   };
 
+  let diceColors: ReturnType<typeof parseDice> = [];
+  try {
+    diceColors = parseDice(state.diceInput).filter(d => d.color);
+  } catch {
+    diceColors = [];
+  }
+
   return (
-    <div className="container">   
-      <h1>🐪 The Camelculator 🐪</h1>
-      <h3>Camel (C)up Calculator</h3>
-      <p>Enter a game state using camel code. Separate spaces with a ",". Camels stack so that the right most camel will be on top. Example: rw,,o,gby</p>
-      <h3>Key:</h3>
-      <ul>
-        <li>r: Red Camel</li>
-        <li>g: Green Camel</li>
-        <li>u: Blue Camel</li>
-        <li>p: Purple Camel</li>
-        <li>y: Yellow Camel</li>
-        <li>w: White Camel</li>
-        <li>b: Black Camel</li>
-        <li>c: Gray die (rolls for black or white; if only one of them is carrying racing camels, or one is directly on top of the other, that one moves instead)</li>
-        <li>d: Desert</li>
-        <li>o: Oasis</li>
-      </ul>
-      <p>Mulitple spaces can be inputted as a number (e.g. ,5,)</p>
+    <div className="container">
+      <h1 className="app-title">🐪 The Camelculator 🐪</h1>
+      <p className="app-subtitle">Camel (C)up Calculator</p>
+
+      <section className="track-panel">
+        {trackState
+          ? <Track state={trackState} onSpaceClick={onSpaceClick} />
+          : <div className="alert alert-warning">The camel code can't be read, so the track can't be drawn.</div>
+        }
+        <div className="track-footer">
+          <span className="text-muted">Click an empty space to add an oasis 🌴 (+1). Click again for a desert 🏜️ (−1), and again to remove it.</span>
+          <span className="dice-left">Dice left: <DiceChips dice={diceColors.map(d => d.color)} /></span>
+        </div>
+        {state.tileError && <div className="tile-error text-danger">{state.tileError}</div>}
+      </section>
+
       <form onSubmit={(e) => {calculate(); e.preventDefault();}}>
         <div className="form-group">
           <label className="form-label" htmlFor="camel-code">Camel Code </label>
@@ -140,13 +177,29 @@ function App() {
           </select>
         }
       </form>
+      <details className="help">
+        <summary>How to write camel code</summary>
+        <p>Separate spaces with a ",". Camels stack so that the right most camel will be on top. Example: rw,,o,gby. Multiple empty spaces can be written as a number (e.g. ,5,).</p>
+        <ul>
+          <li>r: Red Camel</li>
+          <li>g: Green Camel</li>
+          <li>u: Blue Camel</li>
+          <li>p: Purple Camel</li>
+          <li>y: Yellow Camel</li>
+          <li>w: White Camel</li>
+          <li>b: Black Camel</li>
+          <li>c: Gray die (rolls for black or white; if only one of them is carrying racing camels, or one is directly on top of the other, that one moves instead)</li>
+          <li>d: Desert (−1, camels go underneath)</li>
+          <li>o: Oasis (+1, camels go on top)</li>
+        </ul>
+      </details>
       <br />
       {state.error && 
         <div className="alert alert-danger" role="alert">
           {state.error}
         </div>
       }
-      {camelState && hasFinished(camelState) &&
+      {trackState && hasFinished(trackState) &&
         <div className="alert alert-success" role="alert">
           A camel has crossed the finish line. The game is over!
         </div>
@@ -154,9 +207,6 @@ function App() {
       {state.results && <><h3>Leg Bets</h3><Results results={state.results}/></>}
       <br />
       {state.longTermResults && <><h3>Long Term Bets</h3><LongTermResults results={state.longTermResults}/></>}
-      <br />
-      {camelState && <Visualizer state={camelState} />}
-      
     </div>
   );
 }

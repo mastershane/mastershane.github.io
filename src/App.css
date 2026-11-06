@@ -1,0 +1,161 @@
+.app-title {
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.app-subtitle {
+  color: #6c757d;
+  margin-bottom: 12px;
+}
+
+.track-panel {
+  background: #f3e7cf;
+  border: 1px solid #d9c49b;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.track {
+  display: grid;
+  grid-template-columns: repeat(17, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.space {
+  position: relative;
+  min-height: 96px;
+  padding: 18px 3px 4px;
+  border: 1px solid #c9b07f;
+  border-radius: 6px;
+  background: #fffaf0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  font: inherit;
+  cursor: pointer;
+}
+
+.space:hover {
+  border-color: #8a6d3b;
+  box-shadow: 0 0 0 2px rgba(138, 109, 59, 0.25);
+}
+
+.space-oasis {
+  background: #d6f5d6;
+  border-color: #4caf50;
+}
+
+.space-desert {
+  background: #ffe0b2;
+  border-color: #e09a3e;
+}
+
+.space-finish {
+  cursor: default;
+  background: repeating-conic-gradient(#fff 0% 25%, #e6e6e6 0% 50%) 0 0 / 12px 12px;
+}
+
+.space-finish:hover {
+  border-color: #c9b07f;
+  box-shadow: none;
+}
+
+.space-number {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  color: #6c5a3a;
+}
+
+.hazard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: auto 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.hazard-icon {
+  font-size: 22px;
+}
+
+.camel-stack {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+
+.camel {
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+}
+
+.camel-red { background: #e53935; }
+.camel-blue { background: #1e88e5; }
+.camel-green { background: #43a047; }
+.camel-yellow { background: #fdd835; }
+.camel-purple { background: #8e24aa; }
+.camel-white { background: #ffffff; }
+.camel-black { background: #212121; }
+.camel-gray { background: #9e9e9e; }
+
+.track-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.dice-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dice-chips {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.die {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.45);
+}
+
+.tile-error {
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.help {
+  margin-top: 16px;
+}
+
+.help summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* on narrow screens the track wraps onto two rows */
+@media (max-width: 768px) {
+  .track {
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+  }
+  .space {
+    min-height: 84px;
+  }
+}
