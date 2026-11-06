@@ -45,8 +45,15 @@ describe("version 1 rules", () => {
   });
 
   test("finishing the leg rolls every die", () => {
-    const outcome = finishLeg("rguyp", "rguyp", seededRandom(3), RULES.v1);
+    const outcome = finishLeg("rguyw", "rguyw", seededRandom(3), RULES.v1);
     expect(outcome.rolls).toHaveLength(5);
-    expect(outcome.diceInput).toBe("rguyp");
+    expect(outcome.diceInput).toBe("rguyw");
+  });
+
+  test("camel code uses the version 1 colors", () => {
+    // w is the white racing camel in version 1, and moves with its own die
+    const outcome = applyRoll("rw,,g", "rguyw", { color: "Purple", Roll: 2 }, RULES.v1);
+    expect(outcome.boardInput).toBe("r,,gw");
+    expect(outcome.diceInput).toBe("rguy");
   });
 });

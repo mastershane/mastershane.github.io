@@ -90,7 +90,7 @@ export const getRanking = (camelState: CamelState): Color[] => {
 
 const startNewLeg = (camelState: CamelState, rules: Rules): Die[] => {
   camelState.tiles.forEach((t) => (t.hazard = undefined));
-  return parseDice(rules.pyramid);
+  return parseDice(rules.pyramid, rules);
 };
 
 // play a single random game from the given state until a camel finishes

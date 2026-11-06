@@ -1,5 +1,6 @@
 import React from 'react';
 import { OddsResult } from "./camel"
+import { DEFAULT_RULES, displayName, Rules } from "./rules"
 
 
 export function getBgColor(value: number) {
@@ -23,9 +24,10 @@ export function getBgColor(value: number) {
 
 interface Props {
     results: OddsResult
+    rules?: Rules
 }
 
-export const Results = ({ results }: Props) => {
+export const Results = ({ results, rules = DEFAULT_RULES }: Props) => {
     return <>
         <table className="table table-bordered">
             <thead>
@@ -41,7 +43,7 @@ export const Results = ({ results }: Props) => {
             <tbody>
                 {results.camelOdds.map(r =>
                     <tr key={r.camel}>
-                        <th scope="row">{r.camel}</th>
+                        <th scope="row">{displayName(r.camel, rules)}</th>
                         <td style={{backgroundColor: getBgColor(r.fiveValue)}}>{+r.fiveValue.toFixed(3)}</td>
                         <td style={{backgroundColor: getBgColor(r.threeValue)}}>{+r.threeValue.toFixed(3)}</td>
                         <td style={{backgroundColor: getBgColor(r.twoValue)}}>{+r.twoValue.toFixed(3)}</td>

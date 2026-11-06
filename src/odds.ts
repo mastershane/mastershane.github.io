@@ -18,13 +18,13 @@ export type OddsResponse =
 // short term and long term odds for a board written in camel code
 export const computeOdds = (request: OddsRequest): OddsResponse => {
   try {
-    const dice = parseDice(request.diceInput);
     const rules = RULES[request.edition];
+    const dice = parseDice(request.diceInput, rules);
     const simulations = request.simulations > 0 ? request.simulations : DEFAULT_SIMULATIONS;
     return {
       id: request.id,
-      results: getOdds(parseCamel(request.boardInput), dice, rules),
-      longTermResults: getLongTermOdds(parseCamel(request.boardInput), dice, simulations, Math.random, rules),
+      results: getOdds(parseCamel(request.boardInput, rules), dice, rules),
+      longTermResults: getLongTermOdds(parseCamel(request.boardInput, rules), dice, simulations, Math.random, rules),
     };
   } catch (e) {
     console.log(e);

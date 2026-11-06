@@ -1,14 +1,16 @@
 import React from "react";
 import { LongTermResult, LONG_TERM_PAYOUTS } from "./long-term";
 import { getBgColor } from "./results";
+import { DEFAULT_RULES, displayName, Rules } from "./rules";
 
 interface Props {
   results: LongTermResult;
+  rules?: Rules;
 }
 
 const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
 
-export const LongTermResults = ({ results }: Props) => {
+export const LongTermResults = ({ results, rules = DEFAULT_RULES }: Props) => {
   const renderTable = (kind: "win" | "lose") => (
     <table className="table table-bordered">
       <thead>
@@ -27,7 +29,7 @@ export const LongTermResults = ({ results }: Props) => {
           const values = kind === "win" ? r.winValues : r.loseValues;
           return (
             <tr key={r.camel}>
-              <th scope="row">{r.camel}</th>
+              <th scope="row">{displayName(r.camel, rules)}</th>
               <td>
                 {percent(odds)} <small>± {percent(error * 2)}</small>
               </td>

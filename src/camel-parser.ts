@@ -1,23 +1,15 @@
 // convert camel code into the camel state data model
 
 import { CamelState, ChaosColor, Color, Die, Hazard, Map, Tile } from "./camel";
+import { DEFAULT_RULES, Rules } from "./rules";
 
-const codeColorMap: Map<Color | ChaosColor> = {
-    "r": "Red",
-    "u": "Blue",
-    "g": "Green",
-    "y": "Yellow",
-    "w": "White",
-    "p": "Purple",
-    "b": "Black"
-};
-const dieColors: Map<Color | "Gray"> = {
-    "r": "Red",
-    "u": "Blue",
-    "g": "Green",
-    "y": "Yellow",
-    "p": "Purple",
-    "c": "Gray"
+// camel code letter -> camel / die color for the edition being played
+const codeToColor = (rules: Rules): Map<Color | ChaosColor | "Gray"> => {
+    const map: Map<Color | ChaosColor | "Gray"> = {};
+    Object.keys(rules.codes).forEach(color => {
+        map[rules.codes[color]] = color as Color | ChaosColor | "Gray";
+    });
+    return map;
 };
 
 const hazardCodeMap: Map<Hazard> = {
@@ -25,7 +17,8 @@ const hazardCodeMap: Map<Hazard> = {
     "d": "Desert"
 };
 
-export const parseCamel = (camelCode: string): CamelState => {
+export const parseCamel = (camelCode: string, rules: Rules = DEFAULT_RULES): CamelState => {
+    const colors = codeToColor(rules);
     const tiles = camelCode.toLowerCase().split(",").map(squareString => {
         if(!isNaN(parseInt(squareString))){
             const numValue = parseInt(squareString);
@@ -42,22 +35,13 @@ export const parseCamel = (camelCode: string): CamelState => {
         }
         const tile:Tile = {camels: []};
         squareString.split('').forEach(character => {
-            switch(character) {
-                case "r":
-                case "u":
-                case "g":
-                case "y":
-                case "w":
-                case "b":
-                case "p":
-                    tile.camels.push(codeColorMap[character]);
-                    break;
-                case "o":
-                case "d":
-                    tile.hazard = hazardCodeMap[character];
-                    break;
-                default:
-                    throw new Error(`Unsupported Character ${character} found in camel string`)
+            const color = colors[character];
+            if (hazardCodeMap[character]) {
+                tile.hazard = hazardCodeMap[character];
+            } else if (color && color !== "Gray") {
+                tile.camels.push(color);
+            } else {
+                throw new Error(`Unsupported Character ${character} found in camel string`)
             }
         });
         return [tile];
@@ -65,11 +49,18 @@ export const parseCamel = (camelCode: string): CamelState => {
     return { tiles };
 };
 
-export const parseDice = (diceCode: string): Die[] => {
-    return diceCode.split("").map(c => ({ color: dieColors[c] }));
+// Unknown letters give a die with no color, which callers filter out.
+export const parseDice = (diceCode: string, rules: Rules = DEFAULT_RULES): Die[] => {
+    const colors = codeToColor(rules);
+    return diceCode.split("").map(c => {
+        const color = colors[c];
+        // crazy camels don't have their own dice, they move with the gray die
+        const dieColor = color === "White" || color === "Black" ? undefined : color;
+        return { color: dieColor as Color | "Gray" };
+    });
 };
 
-export const toCamelCode = (camelState: CamelState): string => {
+export const toCamelCode = (camelState: CamelState, rules: Rules = DEFAULT_RULES): string => {
     
     let camelCode = camelState.tiles.map(tile => {
         if(tile.hazard){
@@ -80,7 +71,7 @@ export const toCamelCode = (camelState: CamelState): string => {
                     return 'd';
             }
         }
-        return tile.camels.map(colorToCode).join('');
+        return tile.camels.map(c => colorToCode(c, rules)).join('');
     }).join(',');
 
     // we can simplify the camel code output by showing a number
@@ -99,27 +90,9 @@ export const toCamelCode = (camelState: CamelState): string => {
     return camelCode;
 }
 
-export const toDiceCode = (dice: Die[]) => {
-    return dice.map(d => colorToCode(d.color)).join('');
+export const toDiceCode = (dice: Die[], rules: Rules = DEFAULT_RULES) => {
+    return dice.map(d => colorToCode(d.color, rules)).join('');
 };
 
-export const colorToCode = (color: Color | "Gray" | ChaosColor) => {
-    switch(color) {
-        case 'Red':
-            return 'r';
-        case 'Green':
-            return 'g';
-        case 'Blue': 
-            return 'u';
-        case "Gray":
-            return 'c';
-        case 'Yellow':
-            return 'y';
-        case 'Purple':
-            return 'p';
-        case "White":
-            return 'w';
-        case "Black":
-            return "b"
-    }
-};
+export const colorToCode = (color: Color | "Gray" | ChaosColor, rules: Rules = DEFAULT_RULES): string =>
+    rules.codes[color] ?? '';

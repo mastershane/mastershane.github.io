@@ -1,10 +1,12 @@
 import React from "react";
 import { CamelState, ChaosColor, Color, Hazard, Tile, TRACK_LENGTH } from "./camel";
+import { colorClass, DEFAULT_RULES, displayName, Rules } from "./rules";
 
 interface Props {
   state: CamelState;
   // called when a space on the track (0 based index) is clicked
   onSpaceClick?: (index: number) => void;
+  rules?: Rules;
 }
 
 const hazardLabel: Record<Hazard, { icon: string; text: string }> = {
@@ -12,21 +14,21 @@ const hazardLabel: Record<Hazard, { icon: string; text: string }> = {
   Desert: { icon: "🏜️", text: "−1" },
 };
 
-const CamelStack = ({ camels }: { camels: Array<Color | ChaosColor> }) => (
+const CamelStack = ({ camels, rules }: { camels: Array<Color | ChaosColor>; rules: Rules }) => (
   // the last camel in the array is on top of the stack
   <div className="camel-stack">
     {camels.map((c) => (
       <div
         key={c}
-        className={`camel camel-${c.toLowerCase()}`}
-        title={c}
-        aria-label={c}
+        className={`camel ${colorClass(c, rules)}`}
+        title={displayName(c, rules)}
+        aria-label={displayName(c, rules)}
       />
     ))}
   </div>
 );
 
-export const Track = ({ state, onSpaceClick }: Props) => {
+export const Track = ({ state, onSpaceClick, rules = DEFAULT_RULES }: Props) => {
   const spaces: Tile[] = [];
   for (let i = 0; i < TRACK_LENGTH; i++) {
     spaces.push(state.tiles[i] ?? { camels: [] });
@@ -58,22 +60,22 @@ export const Track = ({ state, onSpaceClick }: Props) => {
                 {hazard.text}
               </span>
             )}
-            <CamelStack camels={tile.camels} />
+            <CamelStack camels={tile.camels} rules={rules} />
           </button>
         );
       })}
       <div className="space space-finish" role="listitem" title="Finish line">
         <span className="space-number">🏁</span>
-        <CamelStack camels={finished} />
+        <CamelStack camels={finished} rules={rules} />
       </div>
     </div>
   );
 };
 
-export const DiceChips = ({ dice }: { dice: Array<Color | "Gray"> }) => (
+export const DiceChips = ({ dice, rules = DEFAULT_RULES }: { dice: Array<Color | "Gray">; rules?: Rules }) => (
   <div className="dice-chips" aria-label="Dice left in the pyramid">
     {dice.map((d, i) => (
-      <span key={i} className={`die camel-${d.toLowerCase()}`} title={`${d} die`} />
+      <span key={i} className={`die ${colorClass(d, rules)}`} title={`${displayName(d, rules)} die`} />
     ))}
     {dice.length === 0 && <span className="text-muted">none</span>}
   </div>

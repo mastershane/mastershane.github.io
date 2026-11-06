@@ -79,8 +79,8 @@ test("simulations run quickly from a fresh board", () => {
 });
 
 test("version 1 games never use the gray die", () => {
-  const state = parseCamel("rgu,,yp");
-  const result = getLongTermOdds(state, parseDice("rguyp"), 2000, seededRandom(6), RULES.v1);
+  const state = parseCamel("rgu,,yw", RULES.v1);
+  const result = getLongTermOdds(state, parseDice("rguyw", RULES.v1), 2000, seededRandom(6), RULES.v1);
   expect(result.camelOdds.reduce((sum, c) => sum + c.winOdds, 0)).toBeCloseTo(1);
   // 5 dice per leg moving 2 on average: games take a few legs
   expect(result.averageLegs).toBeGreaterThan(2);

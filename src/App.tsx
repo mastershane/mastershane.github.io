@@ -12,7 +12,7 @@ import { DEFAULT_SIMULATIONS } from './long-term';
 import { LongTermResults } from './long-term-results';
 import { DieChoiceGroup, DieOption, DiceSelector } from './DiceSelector';
 import { useOdds } from './useOdds';
-import { Edition, RULES, Rules } from './rules';
+import { colorClass, displayName, Edition, RULES, Rules } from './rules';
 import { applyRoll as applyGameRoll, finishLeg, RollOutcome } from './game';
 
 const EDITION_KEY = 'camelculator-edition';
@@ -58,7 +58,6 @@ const newGameState = (simulations: string, rules: Rules): IState => ({
   simulations,
 });
 
-const swatch = (color: string) => `camel-${color.toLowerCase()}`;
 
 function App() {
   const [edition, setEdition] = useState<Edition>(loadEdition);
@@ -102,7 +101,7 @@ function App() {
   // the track is drawn from whatever is in the camel code box
   let trackState: CamelState | undefined;
   try {
-    trackState = parseCamel(state.boardInput);
+    trackState = parseCamel(state.boardInput, rules);
   } catch {
     trackState = undefined;
   }
@@ -116,7 +115,7 @@ function App() {
       setState({...state, tileError: toggled.error});
       return;
     }
-    const boardInput = toCamelCode(toggled.state);
+    const boardInput = toCamelCode(toggled.state, rules);
     setState({...state, boardInput, tileError: undefined});
     // keep the odds in sync with the board once the game is being played
     if (state.phase === 'playing') {
@@ -145,7 +144,7 @@ function App() {
   const nextRound = () => {
     try {
       const outcome = finishLeg(state.boardInput, state.diceInput, Math.random, rules);
-      const rolled = outcome.rolls.map(r => `${r.color} ${r.Roll}`).join(', ');
+      const rolled = outcome.rolls.map(r => `${displayName(r.color, rules)} ${r.Roll}`).join(', ');
       const summary = rolled ? `Rolled ${rolled}.` : '';
       showOutcome(outcome, outcome.legEnded ? `${summary} ${LEG_OVER}`.trim() : summary || undefined);
     } catch (e) {
@@ -162,7 +161,7 @@ function App() {
 
   const placeSetupCamel = (color: Color | ChaosColor, roll: Roll) => {
     const board = placeStartingCamel(trackState ?? { tiles: [] }, color, roll);
-    const boardInput = toCamelCode(board);
+    const boardInput = toCamelCode(board, rules);
     if (unplacedCamels().length === 1) {
       // that was the last camel, so the game can start
       startGame(boardInput);
@@ -175,8 +174,8 @@ function App() {
     const isChaos = color === 'Black' || color === 'White';
     return {
       key: color,
-      name: color,
-      swatch: swatch(color),
+      name: displayName(color, rules),
+      swatch: colorClass(color, rules),
       groups: [{
         choices: ROLLS.map(roll => ({
           label: isChaos ? `${roll} (space ${17 - roll})` : `${roll}`,
@@ -189,14 +188,14 @@ function App() {
   const pyramidDice = (): DieOption[] => {
     let dice: ReturnType<typeof parseDice> = [];
     try {
-      dice = parseDice(state.diceInput).filter(d => d.color);
+      dice = parseDice(state.diceInput, rules).filter(d => d.color);
     } catch {
       dice = [];
     }
     return dice.map(d => {
       const groupFor = (color: Color | ChaosColor, label?: string): DieChoiceGroup => ({
         label,
-        swatch: label ? swatch(color) : undefined,
+        swatch: label ? colorClass(color, rules) : undefined,
         choices: ROLLS.map(roll => ({
           label: `${roll}`,
           onSelect: () => applyRoll({ color, Roll: roll }),
@@ -204,8 +203,8 @@ function App() {
       });
       return {
         key: d.color,
-        name: d.color,
-        swatch: swatch(d.color),
+        name: displayName(d.color, rules),
+        swatch: colorClass(d.color, rules),
         groups: d.color === 'Gray'
           ? [groupFor('Black', 'Black'), groupFor('White', 'White')]
           : [groupFor(d.color)],
@@ -215,7 +214,7 @@ function App() {
 
   let diceColors: ReturnType<typeof parseDice> = [];
   try {
-    diceColors = parseDice(state.diceInput).filter(d => d.color);
+    diceColors = parseDice(state.diceInput, rules).filter(d => d.color);
   } catch {
     diceColors = [];
   }
@@ -230,7 +229,7 @@ function App() {
         <h2 className="controls-title">Set up the board</h2>
         <p className="text-muted">Mirror the setup of your real game, or let the calculator roll the starting positions for you.</p>
         <div className="controls-buttons">
-          <button type="button" className="btn btn-primary" onClick={() => startGame(toCamelCode(generateInitialState(Math.random, rules)))}>
+          <button type="button" className="btn btn-primary" onClick={() => startGame(toCamelCode(generateInitialState(Math.random, rules), rules))}>
             Roll automatically
           </button>
           <button
@@ -321,13 +320,13 @@ function App() {
 
       <section className="track-panel">
         {trackState
-          ? <Track state={trackState} onSpaceClick={onSpaceClick} />
+          ? <Track state={trackState} onSpaceClick={onSpaceClick} rules={rules} />
           : <div className="alert alert-warning">The camel code can't be read, so the track can't be drawn.</div>
         }
         <div className="track-footer">
           <span className="text-muted">Click an empty space to add an oasis 🌴 (+1). Click again for a desert 🏜️ (−1), and again to remove it.</span>
           {state.phase === 'playing' && (
-            <span className="dice-left">Dice left: <DiceChips dice={diceColors.map(d => d.color)} /></span>
+            <span className="dice-left">Dice left: <DiceChips dice={diceColors.map(d => d.color)} rules={rules} /></span>
           )}
         </div>
         {state.tileError && <div className="tile-error text-danger">{state.tileError}</div>}
@@ -347,8 +346,8 @@ function App() {
         </div>
       }
       <div className={odds.calculating ? 'results-stale' : undefined}>
-        {state.phase === 'playing' && odds.results && <><h3>Leg Bets</h3><Results results={odds.results}/></>}
-        {state.phase === 'playing' && odds.longTermResults && <><h3>Long Term Bets</h3><LongTermResults results={odds.longTermResults}/></>}
+        {state.phase === 'playing' && odds.results && <><h3>Leg Bets</h3><Results results={odds.results} rules={rules}/></>}
+        {state.phase === 'playing' && odds.longTermResults && <><h3>Long Term Bets</h3><LongTermResults results={odds.longTermResults} rules={rules}/></>}
       </div>
 
       <details className="help">
@@ -370,14 +369,12 @@ function App() {
         </form>
         <p>Separate spaces with a ",". Camels stack so that the right most camel will be on top. Example: rw,,o,gby. Multiple empty spaces can be written as a number (e.g. ,5,).</p>
         <ul>
-          <li>r: Red Camel</li>
-          <li>g: Green Camel</li>
-          <li>u: Blue Camel</li>
-          <li>p: Purple Camel</li>
-          <li>y: Yellow Camel</li>
+          {GoodColors.map(c => (
+            <li key={c}>{rules.codes[c]}: {displayName(c, rules)} Camel</li>
+          ))}
           {rules.crazyCamels && <>
-            <li>w: White Camel</li>
-            <li>b: Black Camel</li>
+            <li>w: White crazy camel</li>
+            <li>b: Black crazy camel</li>
             <li>c: Gray die (rolls for black or white; if only one of them is carrying racing camels, or one is directly on top of the other, that one moves instead)</li>
           </>}
           <li>d: Desert (−1, camels go underneath)</li>
