@@ -2,15 +2,16 @@ import React, { useState } from 'react';
 import './App.css';
 import { colorToCode, parseCamel, parseDice, toCamelCode } from './camel-parser'
 import {
-  CamelState, ChaosColor, CHAOS_COLORS, Color, DieRoll, generateInitialState, getOdds, GoodColors,
-  hasFinished, moveCamelUnit, OddsResult, placeStartingCamel, Roll,
+  CamelState, ChaosColor, CHAOS_COLORS, Color, DieRoll, generateInitialState, GoodColors,
+  hasFinished, moveCamelUnit, placeStartingCamel, Roll,
 } from './camel'
 import { Results } from './results';
 import { DiceChips, Track } from './Track';
 import { toggleHazard } from './hazards';
-import { DEFAULT_SIMULATIONS, getLongTermOdds, LongTermResult } from './long-term';
+import { DEFAULT_SIMULATIONS } from './long-term';
 import { LongTermResults } from './long-term-results';
 import { DieChoiceGroup, DieOption, DiceSelector } from './DiceSelector';
+import { useOdds } from './useOdds';
 
 const initialDice = "rguypc";
 const ROLLS: Roll[] = [1, 2, 3];
@@ -23,8 +24,6 @@ interface IState {
   manualSetup: boolean;
   boardInput: string;
   diceInput: string;
-  results?: OddsResult;
-  longTermResults?: LongTermResult;
   simulations: string;
   error?: string;
   tileError?: string;
@@ -44,43 +43,28 @@ const swatch = (color: string) => `camel-${color.toLowerCase()}`;
 function App() {
   const [state, setState] = useState<IState>(newGameState(String(DEFAULT_SIMULATIONS)));
 
-  const runLongTerm = (camelState: CamelState, dice: ReturnType<typeof parseDice>) => {
-    const simulations = parseInt(state.simulations);
-    return getLongTermOdds(camelState, dice, simulations > 0 ? simulations : DEFAULT_SIMULATIONS);
-  };
+  // odds are calculated in the background so the board updates right away
+  const { odds, request: requestOdds, clear: clearOdds } = useOdds();
+  const recalculate = (boardInput: string, diceInput: string) =>
+    requestOdds(boardInput, diceInput, parseInt(state.simulations));
 
-  const computeResults = (boardInput: string, diceInput: string) => {
-    const dice = parseDice(diceInput);
-    return {
-      results: getOdds(parseCamel(boardInput), dice),
-      longTermResults: runLongTerm(parseCamel(boardInput), dice),
-    };
+  const newGame = (manualSetup = false) => {
+    clearOdds();
+    setState({...newGameState(state.simulations), manualSetup});
   };
 
   // start playing from the given board with a full pyramid
   const startGame = (boardInput: string) => {
-    try {
-      setState({
-        ...state, phase: 'playing', manualSetup: false, boardInput, diceInput: initialDice,
-        ...computeResults(boardInput, initialDice), error: undefined, tileError: undefined,
-        notice: undefined,
-      });
-    } catch (e) {
-      setState({...state, boardInput, error: 'Error made during calculation'});
-      console.log(e);
-    }
+    setState({
+      ...state, phase: 'playing', manualSetup: false, boardInput, diceInput: initialDice,
+      error: undefined, tileError: undefined, notice: undefined,
+    });
+    recalculate(boardInput, initialDice);
   };
 
   const calculate = () => {
-    try {
-      setState({
-        ...state, phase: 'playing', manualSetup: false,
-        ...computeResults(state.boardInput, state.diceInput), error: undefined, tileError: undefined,
-      });
-    } catch (e) {
-      setState({...state, error: 'Error made during calculation'});
-      console.log(e);
-    }
+    setState({...state, phase: 'playing', manualSetup: false, error: undefined, tileError: undefined});
+    recalculate(state.boardInput, state.diceInput);
   };
 
   // the track is drawn from whatever is in the camel code box
@@ -101,16 +85,11 @@ function App() {
       return;
     }
     const boardInput = toCamelCode(toggled.state);
-    // keep the odds in sync with the board if they were already calculated
-    if (state.phase === 'playing' && state.results) {
-      try {
-        setState({...state, boardInput, ...computeResults(boardInput, state.diceInput), error: undefined, tileError: undefined});
-        return;
-      } catch (e) {
-        console.log(e);
-      }
-    }
     setState({...state, boardInput, tileError: undefined});
+    // keep the odds in sync with the board once the game is being played
+    if (state.phase === 'playing') {
+      recalculate(boardInput, state.diceInput);
+    }
   };
 
   const applyRoll = (dieRoll: DieRoll) => {
@@ -129,10 +108,9 @@ function App() {
         notice = 'The leg is over. All dice are back in the pyramid and the desert / oasis tiles were removed.';
       }
 
-      const dice = parseDice(remainingDice);
-      const results = getOdds(camelState, dice);
-      const longTermResults = runLongTerm(camelState, dice);
-      setState({...state, boardInput: toCamelCode(camelState), diceInput: remainingDice, results, longTermResults, error: undefined, tileError: undefined, notice});
+      const boardInput = toCamelCode(camelState);
+      setState({...state, boardInput, diceInput: remainingDice, error: undefined, tileError: undefined, notice});
+      recalculate(boardInput, remainingDice);
     } catch (e) {
       setState({...state, error: 'Error made during calculation'});
       console.log(e);
@@ -227,7 +205,7 @@ function App() {
             Pick dice and numbers
           </button>
           {state.boardInput && (
-            <button type="button" className="btn btn-link" onClick={() => setState({...newGameState(state.simulations), manualSetup: true})}>
+            <button type="button" className="btn btn-link" onClick={() => newGame(true)}>
               Clear board
             </button>
           )}
@@ -254,7 +232,7 @@ function App() {
     <section className="controls-panel">
       <div className="controls-header">
         <h2 className="controls-title">{gameOver ? 'Game over' : 'Next roll'}</h2>
-        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => setState(newGameState(state.simulations))}>
+        <button type="button" className="btn btn-outline-secondary btn-sm" onClick={() => newGame()}>
           New game
         </button>
       </div>
@@ -290,14 +268,21 @@ function App() {
 
       {state.phase === 'setup' ? renderSetup() : renderPlaying()}
 
-      {state.error &&
+      {(state.error || odds.error) &&
         <div className="alert alert-danger" role="alert">
-          {state.error}
+          {state.error || odds.error}
         </div>
       }
 
-      {state.phase === 'playing' && state.results && <><h3>Leg Bets</h3><Results results={state.results}/></>}
-      {state.phase === 'playing' && state.longTermResults && <><h3>Long Term Bets</h3><LongTermResults results={state.longTermResults}/></>}
+      {state.phase === 'playing' && odds.calculating &&
+        <div className="calculating" role="status">
+          <span className="spinner-border spinner-border-sm" aria-hidden="true" /> Updating odds…
+        </div>
+      }
+      <div className={odds.calculating ? 'results-stale' : undefined}>
+        {state.phase === 'playing' && odds.results && <><h3>Leg Bets</h3><Results results={odds.results}/></>}
+        {state.phase === 'playing' && odds.longTermResults && <><h3>Long Term Bets</h3><LongTermResults results={odds.longTermResults}/></>}
+      </div>
 
       <details className="help">
         <summary>Edit the board with camel code</summary>
