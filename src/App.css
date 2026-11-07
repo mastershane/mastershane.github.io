@@ -320,3 +320,60 @@
     text-align: left;
   }
 }
+
+.track-hint {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.track-editing .space {
+  border-style: dashed;
+}
+
+.camel-editable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.camel-editable:hover {
+  outline: 2px solid #0d6efd;
+  outline-offset: 1px;
+}
+
+.track-dragging,
+.track-dragging * {
+  cursor: grabbing !important;
+}
+
+.camel-dragging {
+  opacity: 0.3;
+}
+
+.camel-ghost {
+  position: fixed;
+  z-index: 1000;
+  width: 44px;
+  height: 14px;
+  transform: translate(-50%, -50%) rotate(-4deg);
+  pointer-events: none;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.camel-drop-marker {
+  height: 4px;
+  border-radius: 2px;
+  background: #0d6efd;
+}
+
+.space-drop {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.35);
+}
+
+.space-no-drop {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.3);
+  cursor: not-allowed !important;
+}
