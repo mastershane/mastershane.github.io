@@ -8,6 +8,7 @@ import {
 import { Results } from './results';
 import { DiceChips, Track } from './Track';
 import { toggleHazard } from './hazards';
+import { CamelColor, moveCamelTo } from './edit';
 import { DEFAULT_SIMULATIONS } from './long-term';
 import { LongTermResults } from './long-term-results';
 import { DieChoiceGroup, DieOption, DiceSelector } from './DiceSelector';
@@ -118,6 +119,26 @@ function App() {
     const boardInput = toCamelCode(toggled.state, rules);
     setState({...state, boardInput, tileError: undefined});
     // keep the odds in sync with the board once the game is being played
+    if (state.phase === 'playing') {
+      recalculate(boardInput, state.diceInput);
+    }
+  };
+
+  const [editMode, setEditMode] = useState(false);
+
+  const onMoveCamel = (color: CamelColor, spaceIndex: number, stackIndex: number) => {
+    if (!trackState) {
+      return;
+    }
+    const moved = moveCamelTo(trackState, color, spaceIndex, stackIndex);
+    if (!moved) {
+      return;
+    }
+    const boardInput = toCamelCode(moved, rules);
+    if (boardInput === state.boardInput) {
+      return;
+    }
+    setState({...state, boardInput, tileError: undefined});
     if (state.phase === 'playing') {
       recalculate(boardInput, state.diceInput);
     }
@@ -320,11 +341,25 @@ function App() {
 
       <section className="track-panel">
         {trackState
-          ? <Track state={trackState} onSpaceClick={onSpaceClick} rules={rules} />
+          ? <Track state={trackState} onSpaceClick={onSpaceClick} rules={rules} editMode={editMode} onMoveCamel={onMoveCamel} />
           : <div className="alert alert-warning">The camel code can't be read, so the track can't be drawn.</div>
         }
         <div className="track-footer">
-          <span className="text-muted">Click an empty space to add an oasis 🌴 (+1). Click again for a desert 🏜️ (−1), and again to remove it.</span>
+          <span className="track-hint">
+            <button
+              type="button"
+              className={`btn btn-sm btn-outline-dark${editMode ? ' active' : ''}`}
+              aria-pressed={editMode}
+              onClick={() => setEditMode(!editMode)}
+            >
+              {editMode ? 'Done editing' : '✋ Edit board'}
+            </button>
+            <span className="text-muted">
+              {editMode
+                ? 'Drag a camel to any space, or between camels to change the stack order. Spaces with a tile can\'t hold camels.'
+                : 'Click an empty space to add an oasis 🌴 (+1). Click again for a desert 🏜️ (−1), and again to remove it.'}
+            </span>
+          </span>
           {state.phase === 'playing' && (
             <span className="dice-left">Dice left: <DiceChips dice={diceColors.map(d => d.color)} rules={rules} /></span>
           )}
